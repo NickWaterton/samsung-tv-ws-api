@@ -84,8 +84,8 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
 
     async def start_listening(
         self, callback: Optional[Callable[[str, Any], Optional[Awaitable[None]]]] = None
-    ) -> None:
-        """Open, and start listening."""
+    ) -> bool:
+        """Open, and start listening, returns False if already listening."""
         if not self._recv_loop:
             if not self.is_alive():
                 self.connection = await self.open()
@@ -118,6 +118,7 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
 
     async def close(self) -> None:
         if self.is_alive():
+            assert self.connection
             await self.connection.close()
             if self._recv_loop:
                 await self._recv_loop

@@ -153,7 +153,6 @@ class ExifData:
                     locname.raw['address'].get('territory'),
                     locname.raw['address'].get('country')]
             address = ('{}'.format(', '.join([a for a in addr if a])))
-            address
         except Exception as e:
             address = locname.address
         self.log.info('{}: address: {}'.format(file, address))

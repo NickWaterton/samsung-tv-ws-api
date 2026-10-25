@@ -105,7 +105,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             await self.session.close()
         await super().close()
    
-    async def start_listening(self) -> None:
+    async def start_listening(self) -> bool:  # type: ignore[override]
         # Override base class to process events
         if not self.is_alive():
             await self.open()
@@ -114,6 +114,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 await self.get_artmode()
             except AssertionError:
                 pass
+            return True
+        return False
             
     def get_uuid(self):
         self.art_uuid = str(uuid.uuid4())
@@ -246,7 +248,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return data.get("device", {}).get('PowerState', 'off') == 'on'
         
     async def is_artmode(self) -> bool:
-        return await self.on() and self.art_mode
+        return await self.on() and bool(self.art_mode)
         
     async def in_artmode(self) -> bool:
         data = await self._get_device_info()
@@ -661,7 +663,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             {"request": "get_matte_list"}
         )
         assert data
-        return (json.loads(data["matte_type_list"]), json.loads(data.get("matte_color_list"))) if include_colour else json.loads(data["matte_type_list"])
+        return (json.loads(data["matte_type_list"]), json.loads(data.get("matte_color_list", "[]"))) if include_colour else json.loads(data["matte_type_list"])
 
     async def change_matte(self, content_id, matte_id=None, portrait_matte=None):
         '''
