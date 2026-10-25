@@ -18,10 +18,9 @@ from . import exceptions
 _LOGGING = logging.getLogger(__name__)
 _SSL_CONTEXT: Optional[ssl.SSLContext] = None
 
-# the TV can answer a transfer request before it listens on the socket it named, so connecting
-# straight away is refused or reset (seen on a 2022 Frame), try again a few times
-D2D_CONNECT_ATTEMPTS = 4
-D2D_RETRY_DELAY = 0.5
+# a 2022 Frame resets a secured transfer socket, and abandons the transfer, if we connect as soon as
+# it answers. Art requests used to wait 1s after sending (the key press delay), which gave it time
+D2D_SECURED_CONNECT_DELAY = 1.0
 
 
 def serialize_string(string: Union[str, bytes]) -> str:

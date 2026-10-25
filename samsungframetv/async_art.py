@@ -339,15 +339,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         """connect to the socket the TV named in conn_info for a thumbnail or upload transfer"""
         if secured is None:
             secured = conn_info.get("secured", False)
-        ssl_context = get_ssl_context() if secured else None
-        for attempt in range(helper.D2D_CONNECT_ATTEMPTS):
-            try:
-                return await asyncio.open_connection(conn_info["ip"], int(conn_info["port"]), ssl=ssl_context)
-            except ConnectionError as e:
-                if attempt + 1 == helper.D2D_CONNECT_ATTEMPTS:
-                    raise
-                _LOGGING.debug("%s transfer socket not ready (%r), trying again", self.host, e)
-                await asyncio.sleep(helper.D2D_RETRY_DELAY)
+        if secured:
+            await asyncio.sleep(helper.D2D_SECURED_CONNECT_DELAY)
+        return await asyncio.open_connection(conn_info["ip"], int(conn_info["port"]), ssl=get_ssl_context() if secured else None)
 
     async def _legacy_api(self) -> bool:
         """2017/2018 Frames (art API below 2) upload and send thumbnails in one websocket message"""

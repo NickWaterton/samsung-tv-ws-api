@@ -190,18 +190,12 @@ class SamsungTVArt(SamsungTVWSConnection):
         """connect to the socket the TV named in conn_info for a thumbnail or upload transfer"""
         if secured is None:
             secured = conn_info.get("secured", False)
-        for attempt in range(helper.D2D_CONNECT_ATTEMPTS):
-            art_socket_raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            art_socket = get_ssl_context().wrap_socket(art_socket_raw) if secured else art_socket_raw
-            try:
-                art_socket.connect((conn_info["ip"], int(conn_info["port"])))
-                return art_socket
-            except ConnectionError as e:
-                art_socket.close()
-                if attempt + 1 == helper.D2D_CONNECT_ATTEMPTS:
-                    raise
-                _LOGGING.debug("%s transfer socket not ready (%r), trying again", self.host, e)
-                time.sleep(helper.D2D_RETRY_DELAY)
+        art_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if secured:
+            time.sleep(helper.D2D_SECURED_CONNECT_DELAY)
+            art_socket = get_ssl_context().wrap_socket(art_socket)
+        art_socket.connect((conn_info["ip"], int(conn_info["port"])))
+        return art_socket
 
     def _legacy_api(self) -> bool:
         """2017/2018 Frames (art API below 2) upload and send thumbnails in one websocket message"""

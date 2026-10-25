@@ -14,6 +14,6 @@
 #               get_power_state(), async timeouts, reconnect and art service back off, 2017/2018 Frame support, Python 3.10+
 
 # version 4.1.0 N Waterton October 2026 - diagnose tool, pair(), get_thumbnail() falls back to get_thumbnail_list() on 2022+ Frames,
-#               art requests sent without the key press delay and wait up to 5s for a reply, retry the transfer socket until the TV listens
+#               art requests sent without the key press delay and wait up to 5s for a reply, wait 1s before connecting a secured transfer socket
 
 __version__ = '4.1.0'
