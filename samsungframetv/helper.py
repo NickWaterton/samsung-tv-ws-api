@@ -18,6 +18,11 @@ from . import exceptions
 _LOGGING = logging.getLogger(__name__)
 _SSL_CONTEXT: Optional[ssl.SSLContext] = None
 
+# the TV can answer a transfer request before it listens on the socket it named, so connecting
+# straight away is refused or reset (seen on a 2022 Frame), try again a few times
+D2D_CONNECT_ATTEMPTS = 4
+D2D_RETRY_DELAY = 0.5
+
 
 def serialize_string(string: Union[str, bytes]) -> str:
     if isinstance(string, str):

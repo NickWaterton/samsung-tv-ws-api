@@ -335,6 +335,20 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self._api_version = data["version"]
         return data["version"]
 
+    async def _open_d2d_connection(self, conn_info, secured=None):
+        """connect to the socket the TV named in conn_info for a thumbnail or upload transfer"""
+        if secured is None:
+            secured = conn_info.get("secured", False)
+        ssl_context = get_ssl_context() if secured else None
+        for attempt in range(helper.D2D_CONNECT_ATTEMPTS):
+            try:
+                return await asyncio.open_connection(conn_info["ip"], int(conn_info["port"]), ssl=ssl_context)
+            except ConnectionError as e:
+                if attempt + 1 == helper.D2D_CONNECT_ATTEMPTS:
+                    raise
+                _LOGGING.debug("%s transfer socket not ready (%r), trying again", self.host, e)
+                await asyncio.sleep(helper.D2D_RETRY_DELAY)
+
     async def _legacy_api(self) -> bool:
         """2017/2018 Frames (art API below 2) upload and send thumbnails in one websocket message"""
         if getattr(self, "_api_version", None) is None:
@@ -514,8 +528,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
         assert data
         conn_info = json.loads(data["conn_info"])
-        ssl_context = get_ssl_context() if conn_info.get('secured', False) else None
-        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)
+        reader, writer = await self._open_d2d_connection(conn_info)
         total_num_thumbnails = 1
         current_thumb = -1
         thumbnail_data_dict: Dict[str, bytes] = {}
@@ -562,7 +575,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 thumbnail_data_dict[helper.thumbnail_name(content_id, thumbnail_data)] = thumbnail_data
                 continue
             conn_info = json.loads(data["conn_info"])
-            reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']))
+            reader, writer = await self._open_d2d_connection(conn_info, secured=False)
             header_len = int.from_bytes(await reader.readexactly(4), "big")
             header = json.loads(await reader.readexactly(header_len))
             thumbnail_data_len = int(header["fileLength"])
@@ -676,8 +689,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             }
         )
 
-        ssl_context = get_ssl_context() if conn_info.get('secured', False) else None
-        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)  
+        reader, writer = await self._open_d2d_connection(conn_info)
         writer.write(len(header).to_bytes(4, "big"))
         writer.write(header.encode("ascii"))
         #writer.write(file)
