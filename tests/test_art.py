@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from samsungtvws import exceptions
-from samsungtvws.art import SamsungTVArt
-from samsungtvws.remote import SamsungTVWS
+from samsungframetv import exceptions
+from samsungframetv.art import SamsungTVArt
+from samsungframetv.remote import SamsungTVWS
 
 from .const import (
     D2D_SERVICE_MESSAGE_AVAILABLE_SAMPLE,
@@ -53,9 +53,9 @@ def d2d_reply(request_uuid: str = REQUEST_UUID, sample: str = "", **data) -> str
 def test_create_connection_from_remote() -> None:
     connection = Mock()
     with patch(
-        "samsungtvws.connection.websocket.create_connection"
+        "samsungframetv.connection.websocket.create_connection"
     ) as connection_class, patch(
-        "samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID
+        "samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID
     ):
         connection_class.return_value = connection
         connection.recv.side_effect = [
@@ -78,9 +78,9 @@ def test_create_connection_from_remote() -> None:
 def test_create_connection_direct() -> None:
     connection = Mock()
     with patch(
-        "samsungtvws.connection.websocket.create_connection"
+        "samsungframetv.connection.websocket.create_connection"
     ) as connection_class, patch(
-        "samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID
+        "samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID
     ):
         connection_class.return_value = connection
         connection.recv.side_effect = [
@@ -102,7 +102,7 @@ def test_create_connection_direct() -> None:
 
 def test_set_artmode(connection: Mock) -> None:
     """Ensure simple data can be parsed."""
-    with patch("samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID):
+    with patch("samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID):
         connection.recv.side_effect = [
             MS_CHANNEL_CONNECT_SAMPLE,
             MS_CHANNEL_READY_SAMPLE,
@@ -116,7 +116,7 @@ def test_set_artmode(connection: Mock) -> None:
 
 def test_set_available(connection: Mock) -> None:
     """Ensure simple data can be parsed."""
-    with patch("samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID):
+    with patch("samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID):
         connection.recv.side_effect = [
             MS_CHANNEL_CONNECT_SAMPLE,
             MS_CHANNEL_READY_SAMPLE,
@@ -131,7 +131,7 @@ def test_set_available(connection: Mock) -> None:
 
 
 def test_change_matte(connection: Mock) -> None:
-    with patch("samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID):
+    with patch("samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID):
         connection.recv.side_effect = [
             MS_CHANNEL_CONNECT_SAMPLE,
             MS_CHANNEL_READY_SAMPLE,
@@ -145,8 +145,8 @@ def test_change_matte(connection: Mock) -> None:
 
 def test_send_image_failure(connection: Mock) -> None:
     """Ensure send_image failure raises error and doesn't hang indefinitely."""
-    with patch("samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID), patch(
-        "samsungtvws.art.random.randrange", return_value=4091151321
+    with patch("samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID), patch(
+        "samsungframetv.art.random.randrange", return_value=4091151321
     ):
         connection.recv.side_effect = [
             MS_CHANNEL_CONNECT_SAMPLE,

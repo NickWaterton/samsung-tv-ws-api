@@ -6,9 +6,9 @@ import sys, os
 import asyncio
 import argparse
 
-from samsungtvws.async_art import SamsungTVAsyncArt
-from samsungtvws import __version__
-from samsungtvws.exceptions import ResponseError
+from samsungframetv.async_art import SamsungTVAsyncArt
+from samsungframetv import __version__
+from samsungframetv.exceptions import ResponseError
 
 
 def parseargs():

@@ -1,0 +1,61 @@
+name: Publish to PyPI
+
+# Runs when a GitHub release is published. Builds samsungframetv and the
+# samsungframetv-compat shim, then uploads both with PyPI trusted publishing.
+
+# yamllint disable-line rule:truthy
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build packages
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build -o dist .
+          python -m build -o dist compat
+          twine check dist/*
+
+      - name: Check the release tag matches the version
+        if: github.event_name == 'release'
+        run: |
+          version=$(python -c "import re; print(re.search(r\"__version__ = '(.+)'\", open('samsungframetv/version.py').read()).group(1))")
+          compat=$(python -c "import re; print(re.search(r'^version = \"(.+)\"', open('compat/pyproject.toml').read(), re.M).group(1))")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$tag" ] || [ "$compat" != "$tag" ]; then
+            echo "Release tag $GITHUB_REF_NAME does not match version $version (compat $compat)"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

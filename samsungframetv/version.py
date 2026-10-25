@@ -10,4 +10,7 @@
 # version 3.0.4 N Waterton 8th December 2025 added set_brightness_sensor_setting(), set_motion_timer(), set_motion_sensitivity() and is_true(), cleaned up set_artmode() input
 # version 3.0.5 N Waterton 8th December 2025 rewrote async_art_remove_mats.py to support portait mat, fixed depreciation warnings, reworked upload logic, and added URL support (for upload)
 
-__version__ = '3.0.5'
+# version 4.0.0 N Waterton October 2026 - renamed to samsungframetv (samsungtvws clashed with upstream on PyPI), IP Control and
+#               get_power_state(), async timeouts, reconnect and art service back off, 2017/2018 Frame support, Python 3.10+
+
+__version__ = '4.0.0'

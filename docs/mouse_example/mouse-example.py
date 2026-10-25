@@ -5,7 +5,7 @@ import os
 
 import websockets
 
-from samsungtvws.remote import SamsungTVWS
+from samsungframetv.remote import SamsungTVWS
 
 TV_IP = "192.168.0.X"
 

@@ -10,8 +10,8 @@ from websockets.asyncio.client import ClientConnection
 @pytest.fixture(autouse=True)
 def override_time_sleep():
     """Ignore time sleep in tests."""
-    with patch("samsungtvws.connection.time.sleep"), patch(
-        "samsungtvws.remote.time.sleep"
+    with patch("samsungframetv.connection.time.sleep"), patch(
+        "samsungframetv.remote.time.sleep"
     ):
         yield
 
@@ -21,7 +21,7 @@ def get_connection():
     """Open a websocket connection."""
     connection = Mock()
     with patch(
-        "samsungtvws.connection.websocket.create_connection"
+        "samsungframetv.connection.websocket.create_connection"
     ) as connection_class:
         connection_class.return_value = connection
         yield connection
@@ -30,7 +30,7 @@ def get_connection():
 @pytest.fixture(autouse=True)
 def override_asyncio_sleep():
     """Ignore asyncio sleep in tests."""
-    with patch("samsungtvws.async_connection.asyncio.sleep", new=AsyncMock()):
+    with patch("samsungframetv.async_connection.asyncio.sleep", new=AsyncMock()):
         yield
 
 
@@ -39,7 +39,7 @@ def get_async_connection():
     """Open a websockets connection."""
     connection = Mock(ClientConnection)
     with patch(
-        "samsungtvws.async_connection.connect", new=AsyncMock(return_value=connection)
+        "samsungframetv.async_connection.connect", new=AsyncMock(return_value=connection)
     ):
         yield connection
 

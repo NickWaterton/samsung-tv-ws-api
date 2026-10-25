@@ -1,7 +1,7 @@
 import json
 
-from samsungtvws import event
-from samsungtvws.exceptions import MessageError
+from samsungframetv import event
+from samsungframetv.exceptions import MessageError
 
 from .const import ED_INSTALLED_APP_SAMPLE, MS_ERROR_SAMPLE
 

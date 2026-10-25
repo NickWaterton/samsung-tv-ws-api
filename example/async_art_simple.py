@@ -6,8 +6,8 @@ import asyncio
 import logging
 import argparse
 
-from samsungtvws.async_art import SamsungTVAsyncArt
-from samsungtvws import exceptions, __version__
+from samsungframetv.async_art import SamsungTVAsyncArt
+from samsungframetv import exceptions, __version__
 
 def parseargs():
     # Add command line argument parsing

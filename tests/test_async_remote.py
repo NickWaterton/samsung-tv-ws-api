@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, Mock, call, patch
 
 import pytest
 
-from samsungtvws.async_remote import SamsungTVWSAsyncRemote
-from samsungtvws.exceptions import ConnectionFailure
-from samsungtvws.remote import SendRemoteKey
+from samsungframetv.async_remote import SamsungTVWSAsyncRemote
+from samsungframetv.exceptions import ConnectionFailure
+from samsungframetv.remote import SendRemoteKey
 
 from .const import (
     ED_APPS_LAUNCH_SAMPLE,
@@ -139,7 +139,7 @@ async def test_send_hold_key(async_connection: Mock) -> None:
 
     tv = SamsungTVWSAsyncRemote("127.0.0.1")
     with patch(
-        "samsungtvws.async_connection.asyncio.sleep", new=AsyncMock()
+        "samsungframetv.async_connection.asyncio.sleep", new=AsyncMock()
     ) as patch_sleep:
         await tv.send_command(SendRemoteKey.hold("KEY_POWER", 3))
 
