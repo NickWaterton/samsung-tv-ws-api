@@ -206,3 +206,18 @@ def test_sync_slideshow_uses_auto_rotation_on_2021() -> None:
     with patch.object(SamsungTVArt, "_send_art_request", return_value={"value": "off"}) as send:
         assert tv.get_slideshow_status() == {"value": "off"}
     send.assert_called_once_with({"request": "get_auto_rotation_status"})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", DEVICES, ids=[p.stem for p in DEVICES])
+async def test_brightness_asks_artmode_settings_first(path: Path) -> None:
+    """get_artmode_settings arrived in art API 4.3.4.0, which no longer answers get_brightness"""
+    recorded = json.loads(path.read_text())
+    tv = art_tv(recorded["rest"], replies_from_report(recorded))
+    recorder = diagnose._Recorder(tv)
+    assert (await tv.get_brightness())["value"] is not None
+    requests = [entry["request"]["request"] for entry in recorder.raw]
+    if recorded["art_api_version"].startswith("2."):
+        assert requests == ["get_artmode_settings", "get_brightness"]
+    else:
+        assert requests == ["get_artmode_settings"]

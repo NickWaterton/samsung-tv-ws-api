@@ -16,6 +16,7 @@
 # version 4.1.0 N Waterton October 2026 - diagnose tool, pair(), get_thumbnail() falls back to get_thumbnail_list() on 2022+ Frames,
 #               art requests sent without the key press delay and wait up to 5s for a reply, wait 1s before connecting a secured transfer socket
 
-# version 4.1.1 (in development) get/set_slideshow_status and get/set_auto_rotation_status work on both art API names
+# version 4.1.1 (in development) get/set_slideshow_status and get/set_auto_rotation_status work on both art API names,
+#               async get_brightness() and get_color_temperature() ask get_artmode_settings first (as sync does)
 
-__version__ = '4.1.1.dev1'
+__version__ = '4.1.1.dev2'

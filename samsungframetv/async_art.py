@@ -451,11 +451,13 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return await self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     async def get_brightness(self):
-        data = await self._send_art_request(
-            {"request": "get_brightness"}
-        )
-        if not data:
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        try:
             data = await self.get_artmode_settings('brightness')
+        except exceptions.ResponseError:
+            data = await self._send_art_request(
+                {"request": "get_brightness"}
+            )
         assert data
         return data
 
@@ -468,11 +470,13 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return data
         
     async def get_color_temperature(self):
-        data = await self._send_art_request(
-            {"request": "get_color_temperature"}
-        )
-        if not data:
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        try:
             data = await self.get_artmode_settings('color_temperature')
+        except exceptions.ResponseError:
+            data = await self._send_art_request(
+                {"request": "get_color_temperature"}
+            )
         assert data
         return data
 
