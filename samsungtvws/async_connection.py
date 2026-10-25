@@ -29,6 +29,9 @@ from .helper import get_ssl_context
 
 _LOGGING = logging.getLogger(__name__)
 
+DEFAULT_OPEN_TIMEOUT = 10   # connect and wait for ms.channel.connect, when no timeout is set
+PAIRING_TIMEOUT = 60        # time allowed to press Allow on the TV when there is no token
+
 
 class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
     connection: Optional[ClientConnection]
@@ -56,23 +59,27 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         connect_kwargs: Dict[str, Any] = {}
         if self._is_ssl_connection():
             connect_kwargs["ssl"] = get_ssl_context()
-        connection = await connect(url, open_timeout=self.timeout, **connect_kwargs)
+        open_timeout = self.timeout or DEFAULT_OPEN_TIMEOUT
+        connection = await connect(url, open_timeout=open_timeout, **connect_kwargs)
 
-        event: Optional[str] = None
-        while event is None or event in IGNORE_EVENTS_AT_STARTUP:
-            data = await connection.recv()
-            response = helper.process_api_response(data)
-            event = response.get("event", "*")
-            assert event
-            self._websocket_event(event, response)
+        # a TV can accept the connection and then never answer, so bound the wait
+        startup_timeout = open_timeout if self._get_token() else max(open_timeout, PAIRING_TIMEOUT)
+        try:
+            response = await asyncio.wait_for(self._wait_for_connect_event(connection), startup_timeout)
+        except asyncio.TimeoutError:
+            await connection.close()
+            raise exceptions.ConnectionFailure(
+                "{} accepted the connection but did not answer within {}s".format(self.host, startup_timeout)
+            ) from None
+        event = response.get("event", "*")
 
         if event == MS_CHANNEL_UNAUTHORIZED:
-            await self.close()
+            await connection.close()
             raise exceptions.UnauthorizedError(response)
 
         if event != MS_CHANNEL_CONNECT_EVENT:
             # Unexpected event received during connection routine
-            await self.close()
+            await connection.close()
             if event == MS_CHANNEL_TIMEOUT:
                 _LOGGING.debug("connection not accepted on TV, or token missing/incorrect")
             raise exceptions.ConnectionFailure(response)
@@ -82,10 +89,23 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         self.connection = connection
         return connection
 
+    async def _wait_for_connect_event(self, connection: ClientConnection) -> Dict[str, Any]:
+        """skip the events some TV's send first, return the first one that matters"""
+        while True:
+            data = await connection.recv()
+            response = helper.process_api_response(data)
+            event = response.get("event", "*")
+            assert event
+            self._websocket_event(event, response)
+            if event not in IGNORE_EVENTS_AT_STARTUP:
+                return response
+
     async def start_listening(
         self, callback: Optional[Callable[[str, Any], Optional[Awaitable[None]]]] = None
     ) -> bool:
         """Open, and start listening, returns False if already listening."""
+        self._listening = True
+        self._listen_callback = callback
         if not self._recv_loop:
             if not self.is_alive():
                 self.connection = await self.open()
@@ -103,28 +123,50 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
     ) -> None:
         """Do start listening."""
         _LOGGING.debug("Listening Connection Started")
-        with contextlib.suppress(ConnectionClosed):
+        try:
             while True:
                 data = await connection.recv()
-                response = helper.process_api_response(data)
-                event = response.get("event", "*")
-                self._websocket_event(event, response)
-                if callback:
-                    awaitable = callback(event, response)
-                    if awaitable:
-                        await awaitable
-        _LOGGING.debug("Listening Connection closed")
-        self._recv_loop = None
+                # a bad message or a failing callback must not stop the listener,
+                # or every later request would time out
+                try:
+                    response = helper.process_api_response(data)
+                    event = response.get("event", "*")
+                    self._websocket_event(event, response)
+                    if callback:
+                        awaitable = callback(event, response)
+                        if awaitable:
+                            await awaitable
+                except Exception:
+                    _LOGGING.exception("Error processing message: %s", data)
+        except ConnectionClosed as e:
+            _LOGGING.debug("Connection closed by TV: %s", e)
+        except Exception as e:
+            _LOGGING.warning("Listening stopped: %s", e)
+        finally:
+            _LOGGING.debug("Listening Connection closed")
+            if self._recv_loop is asyncio.current_task():
+                self._recv_loop = None
 
     async def close(self) -> None:
+        self._listening = False
         if self.is_alive():
             assert self.connection
             await self.connection.close()
-            if self._recv_loop:
-                await self._recv_loop
+        if self._recv_loop and self._recv_loop is not asyncio.current_task():
+            await self._recv_loop
+        self._recv_loop = None
 
         self.connection = None
         _LOGGING.debug("Connection closed.")
+
+    async def _reconnect(self) -> None:
+        """drop a dead connection, open a new one, and resume listening if we were"""
+        listening, callback = self._listening, self._listen_callback
+        with contextlib.suppress(Exception):
+            await self.close()
+        self.connection = await self.open()
+        if listening:
+            await SamsungTVWSAsyncConnection.start_listening(self, callback)
 
     async def send_commands(
         self,
@@ -137,7 +179,13 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         delay = self.key_press_delay if key_press_delay is None else key_press_delay
 
         for command in commands:
-            await self._send_command(self.connection, command, delay)
+            try:
+                await self._send_command(self.connection, command, delay)
+            except ConnectionClosed as e:
+                # TV's drop the connection (code 1006) shortly after standby, reconnect once (issue #16)
+                _LOGGING.debug("Connection lost (%s), reconnecting", e)
+                await self._reconnect()
+                await self._send_command(self.connection, command, delay)
 
     async def send_command(
         self,

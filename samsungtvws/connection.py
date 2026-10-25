@@ -58,6 +58,8 @@ class SamsungTVWSBaseConnection:
         self.endpoint = endpoint
         self.connection: Optional[Any] = None
         self._recv_loop: Optional[Any] = None
+        self._listening = False
+        self._listen_callback: Optional[Callable[[str, Any], Any]] = None
         _LOGGING.debug('version: {}'.format(__version__))
 
     def _is_ssl_connection(self) -> bool:
