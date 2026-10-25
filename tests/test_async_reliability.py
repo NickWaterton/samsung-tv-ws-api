@@ -169,3 +169,13 @@ async def test_art_open_times_out_waiting_for_ready(async_connection: Mock) -> N
         tv = SamsungTVAsyncArt("127.0.0.1", token="token", timeout=0.05)
     with pytest.raises(exceptions.ConnectionFailure, match="ms.channel.ready"):
         await tv.open()
+
+
+@pytest.mark.asyncio
+async def test_art_request_has_no_key_press_delay() -> None:
+    """art requests wait for the reply, not the remote's key press delay"""
+    tv = art_tv()
+    tv.wait_for_response = AsyncMock(return_value={"value": "on"})
+    await tv._send_art_request({"request": "get_artmode_status"})
+    assert tv.send_command.await_args.kwargs["key_press_delay"] == 0
+    assert tv.wait_for_response.await_args.args[1] == async_art.ART_RESPONSE_TIMEOUT

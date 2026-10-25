@@ -40,6 +40,9 @@ ART_ENDPOINT = "com.samsung.art-app"
 ART_FAILURE_THRESHOLD = 3
 ART_COOLDOWN_START = 30
 ART_COOLDOWN_MAX = 240
+# seconds to wait for a reply. A TV with another client on the art channel (eg openHAB or
+# Home Assistant) can take more than 2s to answer content requests
+ART_RESPONSE_TIMEOUT = 5
 
 
 class ArtChannelEmitCommand(SamsungTVCommand):
@@ -138,7 +141,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self.art_uuid = str(uuid.uuid4())
         return self.art_uuid
         
-    async def wait_for_response(self, request_uuid, timeout=2):
+    async def wait_for_response(self, request_uuid, timeout=ART_RESPONSE_TIMEOUT):
         data = None
         try:
             if request_uuid not in self.pending_requests.keys():
@@ -161,7 +164,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self,
         request_data: Dict[str, Any],
         wait_for_event: Optional[str] = None,
-        timeout: int = 2
+        timeout: float = ART_RESPONSE_TIMEOUT
     ) -> Optional[Dict[str, Any]]:
         remaining = self._art_unavailable_until - time.monotonic()
         if remaining > 0:
@@ -173,7 +176,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         request_data["request_id"] = request_data["id"]     #new api
         self.pending_requests[wait_for_event or request_data["id"]] = asyncio.Future()
         await self.start_listening()
-        await self.send_command(ArtChannelEmitCommand.art_app_request(request_data))
+        # no key press delay, the reply is what we wait for
+        await self.send_command(ArtChannelEmitCommand.art_app_request(request_data), key_press_delay=0)
         data = await self.wait_for_response(wait_for_event or request_data["id"], timeout)
         if data is None:
             await self._art_request_timed_out(request_data.get("request"))
@@ -348,7 +352,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         assert data
         return data
 
-    async def available(self, category=None, timeout=4):
+    async def available(self, category=None, timeout=10):
         '''
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
