@@ -270,6 +270,7 @@ Frame TV art examples are available in `async_art.py`, `async_art_slideshow_anyt
 - Opening a connection gives up after `timeout` seconds (10 if not set), or 60 seconds when there is no token yet, so there is time to press Allow on the TV. A TV that accepts the connection and never answers raises `ConnectionFailure` instead of hanging.
 - If the TV drops the connection (common soon after standby), the next command reconnects once, resumes listening with the same callback, and resends.
 - An exception in your callback is logged, and the listener keeps running.
+- Art requests wait up to 5 seconds for the TV to answer (`async_art.ART_RESPONSE_TIMEOUT`), and are sent without the remote's key press delay. A TV with another client on the art channel, such as openHAB or Home Assistant, can take more than 2 seconds to answer content requests.
 - The art service can stop answering while the TV is otherwise fine (seen on 2022 Frames). After 3 art requests in a row get no answer, `SamsungTVAsyncArt` closes the connection, and for the next 30 seconds art requests raise `ArtServiceUnavailableError` straight away instead of waiting. If the TV still doesn't answer after that, the pause doubles each time, up to 4 minutes. `ArtServiceUnavailableError` is a subclass of `AssertionError`, so existing `except AssertionError` handlers still catch it.
 
 ```python

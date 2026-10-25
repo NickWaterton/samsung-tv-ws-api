@@ -135,7 +135,8 @@ class SamsungTVArt(SamsungTVWSConnection):
         if not request_data.get("id"):
             request_data["id"] = self.get_uuid()            #old api
         request_data["request_id"] = request_data["id"]     #new api  
-        self.send_command(ArtChannelEmitCommand.art_app_request(request_data))
+        # no key press delay, the reply is what we wait for
+        self.send_command(ArtChannelEmitCommand.art_app_request(request_data), key_press_delay=0)
         return self.wait_for_response(wait_for_event, request_data["id"])
 
     def _get_rest_api(self) -> SamsungTVRest:
