@@ -4,7 +4,7 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
-from samsungtvws.exceptions import ConnectionFailure
+from samsungtvws.exceptions import ConnectionFailure, HttpApiError
 from samsungtvws.remote import SamsungTVWS
 
 from .const import (
@@ -110,3 +110,13 @@ def test_send_hold_key(connection: Mock) -> None:
 
     assert patch_sleep.call_count == 3
     assert patch_sleep.call_args_list == [call(1), call(3), call(1)]
+
+
+def test_create_when_tv_unreachable(connection: Mock) -> None:
+    """Creating the remote must not raise when the REST api is unreachable."""
+    with patch(
+        "samsungtvws.rest.SamsungTVRest.get_model_year",
+        side_effect=HttpApiError("TV unreachable"),
+    ):
+        tv = SamsungTVWS("127.0.0.1", token="123456789")
+    assert tv.token == "123456789"

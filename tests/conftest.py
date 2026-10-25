@@ -1,10 +1,9 @@
 """Tests for remote module."""
 
-import asyncio
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-from aioresponses import aioresponses
 import pytest
+import pytest_asyncio
 from websockets.asyncio.client import ClientConnection
 
 
@@ -31,9 +30,7 @@ def get_connection():
 @pytest.fixture(autouse=True)
 def override_asyncio_sleep():
     """Ignore asyncio sleep in tests."""
-    sleep_future = asyncio.Future()
-    sleep_future.set_result(None)
-    with patch("samsungtvws.async_connection.asyncio.sleep", return_value=sleep_future):
+    with patch("samsungtvws.async_connection.asyncio.sleep", new=AsyncMock()):
         yield
 
 
@@ -42,13 +39,14 @@ def get_async_connection():
     """Open a websockets connection."""
     connection = Mock(ClientConnection)
     with patch(
-        "samsungtvws.async_connection.connect", return_value=asyncio.Future()
-    ) as connection_class:
-        connection_class.return_value.set_result(connection)
+        "samsungtvws.async_connection.connect", new=AsyncMock(return_value=connection)
+    ):
         yield connection
 
 
-@pytest.fixture(name="aioresponse")
-def mock_aioresponse():
-    with aioresponses() as m:
+@pytest_asyncio.fixture(name="aiointercept_mock")
+async def mock_aiointercept():
+    # aiointercept needs Python 3.11+, tests using it are skipped on 3.10
+    aiointercept = pytest.importorskip("aiointercept").aiointercept
+    async with aiointercept(mock_external_urls=True) as m:
         yield m

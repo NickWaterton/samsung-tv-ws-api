@@ -144,7 +144,7 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         key_press_delay: Optional[float] = None,
     ) -> None:
         if isinstance(command, list):
-            _LOGGING.warn(
+            _LOGGING.warning(
                 "Using send_command to send multiple commands is deprecated, "
                 "please use send_commands."
             )
