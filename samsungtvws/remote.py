@@ -13,7 +13,7 @@ import warnings
 
 from samsungtvws.event import ED_INSTALLED_APP_EVENT, parse_installed_app
 
-from . import art, connection, helper, rest, shortcuts
+from . import art, connection, exceptions, helper, rest, shortcuts
 from .command import SamsungTVCommand, SamsungTVSleepCommand
 
 _LOGGING = logging.getLogger(__name__)
@@ -239,7 +239,11 @@ class SamsungTVWS(connection.SamsungTVWSConnection):
         )
         self._rest_api: Optional[rest.SamsungTVRest] = None
         self._app_list: Optional[List[Dict[str, Any]]] = None
-        year = self._get_rest_api().get_model_year()
+        try:
+            year = self._get_rest_api().get_model_year()
+        except (exceptions.HttpApiError, ValueError):
+            _LOGGING.debug('Unable to get model year from {} - may be off?'.format(host))
+            year = 0
         if not self.token:
             self.token = self._get_token()
         if not self.token and year >= 24:   #initialize token now for 2024+ tv's
