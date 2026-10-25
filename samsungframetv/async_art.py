@@ -88,6 +88,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self._art_timeouts = 0
         self._art_cooldown = 0
         self._art_unavailable_until = 0.0
+        self._thumbnail_list_only = False   # 2022+ Frames only answer get_thumbnail_list
         self.get_token()
             
     def get_token(self):
@@ -513,7 +514,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)
         total_num_thumbnails = 1
         current_thumb = -1
-        thumbnail_data_dict = {}
+        thumbnail_data_dict: Dict[str, bytes] = {}
         while current_thumb+1 < total_num_thumbnails:
             header_len = int.from_bytes(await reader.readexactly(4), "big")
             header = json.loads(await reader.readexactly(header_len))
@@ -528,7 +529,10 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
     async def get_thumbnail(self, content_id_list=[], as_dict=False):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
-        thumbnail_data_dict = {}
+        if self._thumbnail_list_only:
+            thumbnails = await self.get_thumbnail_list(content_id_list)
+            return thumbnails if as_dict else list(thumbnails.values()) if len(content_id_list) > 1 else next(iter(thumbnails.values()), None)
+        thumbnail_data_dict: Dict[str, bytes] = {}
         thumbnail_data = None
         for content_id in content_id_list:
             data = await self._send_art_request(
@@ -542,6 +546,11 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                     }
                 }
             )
+            if data is None and not thumbnail_data_dict and not await self._legacy_api():
+                # newer TV's (seen on a 2022 Frame) don't answer get_thumbnail at all
+                _LOGGING.info("%s did not answer get_thumbnail, using get_thumbnail_list", self.host)
+                self._thumbnail_list_only = True
+                return await self.get_thumbnail(content_id_list, as_dict)
             assert data
             if data.get("binary"):
                 # older art API's send the thumbnail inline
