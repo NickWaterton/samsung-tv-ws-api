@@ -13,6 +13,7 @@
 # version 4.0.0 N Waterton October 2026 - renamed to samsungframetv (samsungtvws clashed with upstream on PyPI), IP Control and
 #               get_power_state(), async timeouts, reconnect and art service back off, 2017/2018 Frame support, Python 3.10+
 
-# version 4.1.0 (in development) diagnose tool, get_thumbnail() falls back to get_thumbnail_list() on 2022+ Frames
+# version 4.1.0 N Waterton October 2026 - diagnose tool, pair(), get_thumbnail() falls back to get_thumbnail_list() on 2022+ Frames,
+#               art requests sent without the key press delay and wait up to 5s for a reply
 
-__version__ = '4.1.0.dev3'
+__version__ = '4.1.0'
