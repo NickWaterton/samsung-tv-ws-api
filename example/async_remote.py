@@ -1,8 +1,8 @@
 import asyncio
 import logging
 
-from samsungtvws.async_remote import SamsungTVWSAsyncRemote
-from samsungtvws.remote import SendRemoteKey
+from samsungframetv.async_remote import SamsungTVWSAsyncRemote
+from samsungframetv.remote import SendRemoteKey
 
 logging.basicConfig(level=logging.DEBUG)
 

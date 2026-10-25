@@ -4,8 +4,8 @@ import logging
 
 import aiohttp
 
-from samsungtvws.async_rest import SamsungTVAsyncRest
-from samsungtvws.exceptions import HttpApiError
+from samsungframetv.async_rest import SamsungTVAsyncRest
+from samsungframetv.exceptions import HttpApiError
 
 logging.basicConfig(level=logging.DEBUG)
 

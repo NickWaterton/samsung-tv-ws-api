@@ -4,7 +4,7 @@ import aiohttp
 import pytest
 from yarl import URL
 
-from samsungtvws.encrypted.authenticator import SamsungTVEncryptedWSAsyncAuthenticator
+from samsungframetv.encrypted.authenticator import SamsungTVEncryptedWSAsyncAuthenticator
 
 
 @pytest.mark.asyncio

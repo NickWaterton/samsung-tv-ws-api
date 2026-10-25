@@ -2,8 +2,8 @@
 
 import binascii
 
-from samsungtvws.encrypted.command import SamsungTVEncryptedCommand
-from samsungtvws.encrypted.session import SamsungTVEncryptedSession
+from samsungframetv.encrypted.command import SamsungTVEncryptedCommand
+from samsungframetv.encrypted.session import SamsungTVEncryptedSession
 
 TOKEN = "037739871315caef138547b03e348b72"
 SESSION_ID = "1"

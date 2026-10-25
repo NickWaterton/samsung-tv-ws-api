@@ -1,9 +1,57 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "samsungframetv"
+dynamic = ["version"]
+description = "Samsung Smart TV and Frame TV art mode API (websocket, REST and IP Control)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LGPL-3.0-only"
+authors = [
+    { name = "Nick Waterton", email = "n.waterton@outlook.com" },
+    { name = "Xchwarze" },
+]
+keywords = ["samsung", "frame", "tv", "art mode", "tizen", "websocket"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Home Automation",
+]
+dependencies = [
+    "websocket-client>=0.57.0",
+    "requests>=2.21.0",
+    "aiohttp>=3.8.1",
+    "websockets>=13",
+    "async_timeout>=4.0.3",
+]
+
+[project.optional-dependencies]
+# async support is included by default, the extra is kept so samsungframetv[async] still installs
+async = []
+encrypted = ["cryptography>=35.0.0", "py3rijndael>=0.3.3"]
+
+[project.urls]
+Homepage = "https://github.com/NickWaterton/samsung-tv-ws-api"
+Issues = "https://github.com/NickWaterton/samsung-tv-ws-api/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "samsungframetv.version.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["samsungframetv*"]
+
+[tool.setuptools.package-data]
+samsungframetv = ["py.typed"]
+
 [tool.isort]
 # https://github.com/PyCQA/isort/wiki/isort-Settings
 profile = "black"
 force_sort_within_sections = true
 known_first_party = [
-    "samsungtvws",
+    "samsungframetv",
     "tests",
 ]
 forced_separate = [

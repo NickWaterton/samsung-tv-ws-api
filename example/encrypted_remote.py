@@ -3,7 +3,7 @@ import logging
 
 import aiohttp
 
-from samsungtvws.encrypted.remote import SamsungTVEncryptedWSAsyncRemote, SendRemoteKey
+from samsungframetv.encrypted.remote import SamsungTVEncryptedWSAsyncRemote, SendRemoteKey
 
 logging.basicConfig(level=logging.DEBUG)
 

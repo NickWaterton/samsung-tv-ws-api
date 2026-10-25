@@ -11,7 +11,7 @@ import time
 from typing import Any, Dict, List, Optional, Union
 import warnings
 
-from samsungtvws.event import ED_INSTALLED_APP_EVENT, parse_installed_app
+from samsungframetv.event import ED_INSTALLED_APP_EVENT, parse_installed_app
 
 from . import art, connection, exceptions, helper, rest, shortcuts
 from .command import SamsungTVCommand, SamsungTVSleepCommand

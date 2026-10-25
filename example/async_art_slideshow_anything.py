@@ -31,8 +31,8 @@ from signal import SIGTERM, SIGINT
 from dataclasses import dataclass
 from enum import Enum
 
-from samsungtvws.async_art import SamsungTVAsyncArt
-from samsungtvws import __version__
+from samsungframetv.async_art import SamsungTVAsyncArt
+from samsungframetv import __version__
 
 logging.basicConfig(level=logging.INFO)
 

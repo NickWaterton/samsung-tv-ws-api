@@ -13,8 +13,8 @@ import sys
 
 sys.path.append('../')
 
-from samsungtvws import SamsungTVWS
-from samsungtvws.ipcontrol import SamsungTVIPControl
+from samsungframetv import SamsungTVWS
+from samsungframetv.ipcontrol import SamsungTVIPControl
 
 
 def main():

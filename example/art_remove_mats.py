@@ -3,7 +3,7 @@ import sys
 
 sys.path.append("../")
 
-from samsungtvws import SamsungTVWS  # noqa: E402
+from samsungframetv import SamsungTVWS  # noqa: E402
 
 # Increase debug level
 logging.basicConfig(level=logging.INFO)

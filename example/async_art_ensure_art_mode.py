@@ -9,10 +9,10 @@ import argparse
 from pathlib import Path
 from signal import SIGTERM, SIGINT
 
-from samsungtvws.async_art import SamsungTVAsyncArt
-from samsungtvws.async_remote import SamsungTVWSAsyncRemote
-from samsungtvws.remote import SendRemoteKey
-from samsungtvws import exceptions, __version__
+from samsungframetv.async_art import SamsungTVAsyncArt
+from samsungframetv.async_remote import SamsungTVWSAsyncRemote
+from samsungframetv.remote import SendRemoteKey
+from samsungframetv import exceptions, __version__
 
 logging.basicConfig(level=logging.DEBUG)
 

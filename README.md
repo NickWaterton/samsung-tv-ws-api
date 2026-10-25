@@ -1,8 +1,8 @@
 <p align="center">
     <img src="https://user-images.githubusercontent.com/5860071/47255992-611d9b00-d481-11e8-965d-d9816f254be2.png" width="300px" border="0" />
     <br/>
-    <a href="https://github.com/xchwarze/samsung-tv-ws-api/releases/latest">
-        <img src="https://img.shields.io/badge/version-2.6.0-brightgreen.svg?style=flat-square" alt="Version">
+    <a href="https://pypi.org/project/samsungframetv/">
+        <img src="https://img.shields.io/pypi/v/samsungframetv.svg?style=flat-square" alt="Version">
     </a>
     Samsung Smart TV WS API wrapper
 </p>
@@ -13,64 +13,60 @@ It currently supports modern (post-2016) TVs with Ethernet or Wi-Fi connectivity
 
 This fork is based on https://github.com/xchwarze/samsung-tv-ws-api work
 
-Origionally Based on https://github.com/marysieek/samsung-tv-api work
+Originally based on https://github.com/marysieek/samsung-tv-api work
 
 ## Install
 
-### Install This Fork
+This fork is intended to provide extended support for Frame TV's. From version 4.0.0 it is published on PyPI as `samsungframetv` (the `samsungtvws` name belongs to the original project):
 
-This fork is intened to provide extended support to Frame TV's.
-
-First clone this repository to your local drive (make sure you have git installed):
-
-```
-git clone https://github.com/NickWaterton/samsung-tv-ws-api.git
+```bash
+pip install samsungframetv
 ```
 
-Then change to the `samsung-tv-ws-api` directory:
+With the optional extras:
 
-```
-cd samsung-tv-ws-api
+```bash
+pip install "samsungframetv[async,encrypted]"
 ```
 
-Now run install:
-
-```
-sudo pip install --editable .
-```
-You can leave `--editable` out if you don't want to install in developer mode.   
-**NOTE:** setuptools is deprecated (in favour of pip). 
-
-You can also install directly from git using pip (your command may be `pip` or `pip3` depending on your setup):
+Or install the latest code directly from git:
 
 ```bash
 pip install git+https://github.com/NickWaterton/samsung-tv-ws-api.git
 ```
 
-Or from the git clone (you may need `sudo pip install` for some installs):
+Or from a clone, in developer mode:
 
 ```bash
 git clone https://github.com/NickWaterton/samsung-tv-ws-api.git
-pip install "./samsung-tv-ws-api"
+cd samsung-tv-ws-api
+pip install --editable .
 ```
 
-### Install Origional
+### Upgrading from samsungframetv
 
-```bash
-$ pip3 install samsungtvws[async,encrypted]
+The package was renamed from `samsungtvws` to `samsungframetv` in version 4.0.0. The API is unchanged, so new code only needs the new import:
+
+```python
+from samsungframetv import SamsungTVWS
+from samsungframetv.async_art import SamsungTVAsyncArt
 ```
 
-or
+If you have existing code (or an app you can't change) that does `import samsungtvws`, install the compatibility package as well. It maps every `samsungtvws` import onto `samsungframetv`:
 
 ```bash
-$ pip3 install "git+https://github.com/xchwarze/samsung-tv-ws-api.git#egg=samsungtvws[async,encrypted]"
+pip uninstall samsungtvws
+pip install samsungframetv-compat
 ```
 
-or...!
+Uninstall `samsungtvws` first, as both packages provide a `samsungtvws` module. The compatibility package will be kept for at least the 4.x releases.
+
+### Install Original
+
+The original project, which this fork is based on, is available as:
 
 ```bash
-$ git clone https://github.com/xchwarze/samsung-tv-ws-api
-$ pip3 install "./samsung-tv-ws-api[async,encrypted]"
+pip install "samsungtvws[async,encrypted]"
 ```
 
 ### Extras
@@ -90,7 +86,7 @@ import wakeonlan
 
 sys.path.append('../')
 
-from samsungtvws import SamsungTVWS
+from samsungframetv import SamsungTVWS
 
 # Increase debug level
 logging.basicConfig(level=logging.INFO)
@@ -159,7 +155,7 @@ import logging
 
 sys.path.append('../')
 
-from samsungtvws import SamsungTVWS
+from samsungframetv import SamsungTVWS
 
 # Increase debug level
 logging.basicConfig(level=logging.INFO)
@@ -228,8 +224,8 @@ tv.art().set_photo_filter('SAM-F0206', 'ink')
 IP Control (JSON-RPC on port 1516, 1515 on pre 2020 TV's) is the most reliable source of power state, and can also switch inputs and power the TV on and off without SmartThings. Enable it on the TV in *Settings > General > Network > Expert Settings > IP Remote*. Pairing only works when the TV is on and **not** in art mode, press Allow on the TV.
 
 ```python
-from samsungtvws import SamsungTVWS
-from samsungtvws.ipcontrol import SamsungTVIPControl
+from samsungframetv import SamsungTVWS
+from samsungframetv.ipcontrol import SamsungTVIPControl
 
 ipc = SamsungTVIPControl('192.168.xxx.xxx', token_file='ipcontrol_token.txt')
 if not ipc.token:
@@ -257,7 +253,7 @@ Frame TV art examples are available in `async_art.py`, `async_art_slideshow_anyt
 - The art service can stop answering while the TV is otherwise fine (seen on 2022 Frames). After 3 art requests in a row get no answer, `SamsungTVAsyncArt` closes the connection, and for the next 30 seconds art requests raise `ArtServiceUnavailableError` straight away instead of waiting. If the TV still doesn't answer after that, the pause doubles each time, up to 4 minutes. `ArtServiceUnavailableError` is a subclass of `AssertionError`, so existing `except AssertionError` handlers still catch it.
 
 ```python
-from samsungtvws.exceptions import ArtServiceUnavailableError
+from samsungframetv.exceptions import ArtServiceUnavailableError
 
 if not tv.art_service_available:
     print('art service is not answering')

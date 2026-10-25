@@ -4,7 +4,7 @@ from typing import Optional
 
 import aiohttp
 
-from samsungtvws.encrypted.authenticator import SamsungTVEncryptedWSAsyncAuthenticator
+from samsungframetv.encrypted.authenticator import SamsungTVEncryptedWSAsyncAuthenticator
 
 logging.basicConfig(level=logging.DEBUG)
 

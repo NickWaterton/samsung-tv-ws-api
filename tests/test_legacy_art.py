@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from samsungtvws import exceptions, helper
-from samsungtvws.art import SamsungTVArt
-from samsungtvws.async_art import SamsungTVAsyncArt
-from samsungtvws.async_remote import SamsungTVWSAsyncRemote
-from samsungtvws.connection import SamsungTVWSBaseConnection
-from samsungtvws.remote import SamsungTVWS
+from samsungframetv import exceptions, helper
+from samsungframetv.art import SamsungTVArt
+from samsungframetv.async_art import SamsungTVAsyncArt
+from samsungframetv.async_remote import SamsungTVWSAsyncRemote
+from samsungframetv.connection import SamsungTVWSBaseConnection
+from samsungframetv.remote import SamsungTVWS
 
 from .const import MS_CHANNEL_CONNECT_SAMPLE, MS_CHANNEL_READY_SAMPLE
 from .test_art import REQUEST_UUID, d2d_reply
@@ -132,7 +132,7 @@ async def test_async_channel_timeout_error(async_connection: Mock) -> None:
 
 
 def test_legacy_upload_sends_one_binary_message(connection: Mock) -> None:
-    with patch("samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID):
+    with patch("samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID):
         connection.recv.side_effect = [
             MS_CHANNEL_CONNECT_SAMPLE,
             MS_CHANNEL_READY_SAMPLE,
@@ -151,7 +151,7 @@ def test_legacy_upload_sends_one_binary_message(connection: Mock) -> None:
 
 
 def test_inline_thumbnail(connection: Mock) -> None:
-    with patch("samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID):
+    with patch("samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID):
         connection.recv.side_effect = [
             MS_CHANNEL_CONNECT_SAMPLE,
             MS_CHANNEL_READY_SAMPLE,
@@ -162,7 +162,7 @@ def test_inline_thumbnail(connection: Mock) -> None:
 
 
 def test_matte_list_2018(connection: Mock) -> None:
-    with patch("samsungtvws.art.uuid.uuid4", return_value=REQUEST_UUID):
+    with patch("samsungframetv.art.uuid.uuid4", return_value=REQUEST_UUID):
         connection.recv.side_effect = [
             MS_CHANNEL_CONNECT_SAMPLE,
             MS_CHANNEL_READY_SAMPLE,

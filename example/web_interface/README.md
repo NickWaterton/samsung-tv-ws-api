@@ -11,7 +11,7 @@ There are additional packages required to support the web framework, to install 
 cd samsung-tv-ws-api/example/web_interface
 pip install -r requirements.txt
 ```
-This is *after* you have installed the `samsungtvws` package as described on the main page. `pip` may be `pip3` on your system.
+This is *after* you have installed the `samsungframetv` package as described on the main page. `pip` may be `pip3` on your system.
 
 ## Usage
 

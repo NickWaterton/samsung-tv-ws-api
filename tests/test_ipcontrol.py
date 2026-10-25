@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from samsungtvws import ipcontrol
-from samsungtvws.ipcontrol import (
+from samsungframetv import ipcontrol
+from samsungframetv.ipcontrol import (
     POWER_ART,
     POWER_OFF,
     POWER_ON,
@@ -190,7 +190,7 @@ def async_art(device_info: Dict[str, Any], artmode: Any):
     """SamsungTVAsyncArt with REST and art channel answers patched."""
     from unittest.mock import AsyncMock
 
-    from samsungtvws.async_art import SamsungTVAsyncArt
+    from samsungframetv.async_art import SamsungTVAsyncArt
 
     with patch.object(SamsungTVAsyncArt, "get_token"):
         tv = SamsungTVAsyncArt("127.0.0.1")

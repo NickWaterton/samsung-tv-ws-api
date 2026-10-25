@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from websockets.exceptions import ConnectionClosedError
 
-from samsungtvws import async_art, exceptions
-from samsungtvws.async_art import SamsungTVAsyncArt
-from samsungtvws.async_remote import SamsungTVWSAsyncRemote
-from samsungtvws.remote import SendRemoteKey
+from samsungframetv import async_art, exceptions
+from samsungframetv.async_art import SamsungTVAsyncArt
+from samsungframetv.async_remote import SamsungTVWSAsyncRemote
+from samsungframetv.remote import SendRemoteKey
 
 from .const import MS_CHANNEL_CONNECT_SAMPLE, MS_ERROR_SAMPLE
 
@@ -34,7 +34,7 @@ async def test_open_times_out_when_tv_never_answers(async_connection: Mock) -> N
 async def test_open_uses_default_timeout() -> None:
     connection = Mock()
     connection.recv = AsyncMock(side_effect=[MS_CHANNEL_CONNECT_SAMPLE])
-    with patch("samsungtvws.async_connection.connect", new=AsyncMock(return_value=connection)) as connect:
+    with patch("samsungframetv.async_connection.connect", new=AsyncMock(return_value=connection)) as connect:
         await SamsungTVWSAsyncRemote("127.0.0.1").open()
     assert connect.call_args.kwargs["open_timeout"] == 10
 
@@ -116,7 +116,7 @@ async def test_art_breaker_backs_off_then_recovers() -> None:
     tv = art_tv()
     tv.wait_for_response = AsyncMock(return_value=None)
     now = [1000.0]
-    with patch("samsungtvws.async_art.time.monotonic", side_effect=lambda: now[0]):
+    with patch("samsungframetv.async_art.time.monotonic", side_effect=lambda: now[0]):
         for _ in range(async_art.ART_FAILURE_THRESHOLD):
             await tv._send_art_request({"request": "get_artmode_status"})
         assert tv._art_cooldown == async_art.ART_COOLDOWN_START

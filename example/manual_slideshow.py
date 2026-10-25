@@ -2,7 +2,7 @@
 import argparse
 import logging
 
-from samsungtvws import SamsungTVWS, exceptions, __version__
+from samsungframetv import SamsungTVWS, exceptions, __version__
 
 def parseargs():
     # Add command line argument parsing

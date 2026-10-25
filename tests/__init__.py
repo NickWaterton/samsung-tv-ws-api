@@ -1,1 +1,1 @@
-"""Test suite for samsungtvws package."""
+"""Test suite for samsungframetv package."""

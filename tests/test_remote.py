@@ -4,8 +4,8 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
-from samsungtvws.exceptions import ConnectionFailure, HttpApiError
-from samsungtvws.remote import SamsungTVWS
+from samsungframetv.exceptions import ConnectionFailure, HttpApiError
+from samsungframetv.remote import SamsungTVWS
 
 from .const import (
     ED_APPS_LAUNCH_SAMPLE,
@@ -105,7 +105,7 @@ def test_send_hold_key(connection: Mock) -> None:
     connection.recv.side_effect = [MS_CHANNEL_CONNECT_SAMPLE]
 
     tv = SamsungTVWS("127.0.0.1")
-    with patch("samsungtvws.connection.time.sleep") as patch_sleep:
+    with patch("samsungframetv.connection.time.sleep") as patch_sleep:
         tv.hold_key("KEY_POWER", 3)
 
     assert patch_sleep.call_count == 3
@@ -115,7 +115,7 @@ def test_send_hold_key(connection: Mock) -> None:
 def test_create_when_tv_unreachable(connection: Mock) -> None:
     """Creating the remote must not raise when the REST api is unreachable."""
     with patch(
-        "samsungtvws.rest.SamsungTVRest.get_model_year",
+        "samsungframetv.rest.SamsungTVRest.get_model_year",
         side_effect=HttpApiError("TV unreachable"),
     ):
         tv = SamsungTVWS("127.0.0.1", token="123456789")
