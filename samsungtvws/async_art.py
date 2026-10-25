@@ -8,12 +8,14 @@ Copyright (C) 2024,2025 Nick Waterton <n.waterton@outlook.com>
 SPDX-License-Identifier: LGPL-3.0
 """
 
+import contextlib
 from datetime import datetime
 import json
 import logging
 import random
 from pathlib import Path
 import asyncio
+import time
 import aiohttp
 from typing import Any, Dict, List, Optional, Union, Callable, Awaitable
 from urllib.parse import urlparse
@@ -21,7 +23,7 @@ import uuid
 
 from . import exceptions, helper
 from .command import SamsungTVCommand
-from .async_connection import SamsungTVWSAsyncConnection
+from .async_connection import SamsungTVWSAsyncConnection, DEFAULT_OPEN_TIMEOUT
 from .remote import SamsungTVWS
 from .event import D2D_SERVICE_MESSAGE_EVENT, MS_CHANNEL_READY_EVENT
 from .async_rest import SamsungTVAsyncRest
@@ -31,6 +33,13 @@ from . import ipcontrol
 _LOGGING = logging.getLogger(__name__)
 
 ART_ENDPOINT = "com.samsung.art-app"
+
+# The art service can stop answering (seen on 2022 Frames after watching TV) while the
+# websocket stays open. After this many timeouts in a row the connection is closed and
+# requests fail fast for a cooldown period, which doubles each time the TV still does not answer.
+ART_FAILURE_THRESHOLD = 3
+ART_COOLDOWN_START = 30
+ART_COOLDOWN_MAX = 240
 
 
 class ArtChannelEmitCommand(SamsungTVCommand):
@@ -76,6 +85,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self.lock = asyncio.Lock()
         self.pending_requests = {}
         self.callbacks = {}
+        self._art_timeouts = 0
+        self._art_cooldown = 0
+        self._art_unavailable_until = 0.0
         self.get_token()
             
     def get_token(self):
@@ -89,7 +101,11 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
 
         # Override base class to wait for MS_CHANNEL_READY_EVENT
         assert self.connection
-        data = await self.connection.recv()
+        try:
+            data = await asyncio.wait_for(self.connection.recv(), self.timeout or DEFAULT_OPEN_TIMEOUT)
+        except asyncio.TimeoutError:
+            await self.close()
+            raise exceptions.ConnectionFailure("{} art channel did not send ms.channel.ready".format(self.host)) from None
         response = helper.process_api_response(data)
         event = response.get("event", "*")
         self._websocket_event(event, response)
@@ -144,16 +160,54 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         wait_for_event: Optional[str] = None,
         timeout: int = 2
     ) -> Optional[Dict[str, Any]]:
+        remaining = self._art_unavailable_until - time.monotonic()
+        if remaining > 0:
+            raise exceptions.ArtServiceUnavailableError(
+                "{} art service is not answering, retry in {:.0f}s".format(self.host, remaining)
+            )
         if not request_data.get("id"):
             request_data["id"] = self.get_uuid()            #old api
         request_data["request_id"] = request_data["id"]     #new api
         self.pending_requests[wait_for_event or request_data["id"]] = asyncio.Future()
         await self.start_listening()
         await self.send_command(ArtChannelEmitCommand.art_app_request(request_data))
-        return await self.wait_for_response(wait_for_event or request_data["id"], timeout)
+        data = await self.wait_for_response(wait_for_event or request_data["id"], timeout)
+        if data is None:
+            await self._art_request_timed_out(request_data.get("request"))
+        else:
+            self._art_timeouts = self._art_cooldown = 0
+        return data
+
+    def reset_art_service(self) -> None:
+        """forget past timeouts, eg when you know the TV has just been turned on"""
+        self._art_timeouts = self._art_cooldown = 0
+        self._art_unavailable_until = 0.0
+
+    @property
+    def art_service_available(self) -> bool:
+        """False while requests are failing fast because the art service stopped answering"""
+        return time.monotonic() >= self._art_unavailable_until
+
+    async def _art_request_timed_out(self, request: Optional[str]) -> None:
+        self._art_timeouts += 1
+        # after a cooldown, one more timeout is enough to back off again
+        threshold = 1 if self._art_cooldown else ART_FAILURE_THRESHOLD
+        _LOGGING.debug("art request %s timed out (%d/%d)", request, self._art_timeouts, threshold)
+        if self._art_timeouts < threshold:
+            return
+        self._art_timeouts = 0
+        self._art_cooldown = min(self._art_cooldown * 2 or ART_COOLDOWN_START, ART_COOLDOWN_MAX)
+        self._art_unavailable_until = time.monotonic() + self._art_cooldown
+        _LOGGING.warning(
+            "%s art service is not answering, closing the connection and pausing requests for %ds",
+            self.host, self._art_cooldown,
+        )
+        with contextlib.suppress(Exception):
+            await self.close()
         
     async def process_event(self, event=None, response=None):
         if event == D2D_SERVICE_MESSAGE_EVENT:
+            self._art_timeouts = 0      # the art service is answering
             data = json.loads(response["data"])
             sub_event = data.get("event", "*")
             if 'artmode_status' in sub_event:

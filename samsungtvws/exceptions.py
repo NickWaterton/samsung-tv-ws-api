@@ -40,3 +40,12 @@ class TimeoutError(Exception):
     """Websocket time out."""
 
     pass
+
+
+class ArtServiceUnavailableError(TimeoutError, AssertionError):
+    """The art service stopped answering, requests fail fast until it recovers.
+
+    Also an AssertionError, because art calls that got no answer have always raised one.
+    """
+
+    pass
