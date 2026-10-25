@@ -73,6 +73,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         self.art_uuid = str(uuid.uuid4())
         self._rest_api: Optional[SamsungTVRest] = None
         self.pending_requests = None
+        self._slideshow_name: Optional[str] = None   # auto_rotation or slideshow, see _slideshow_request
 
     def open(self) -> websocket.WebSocket:
         super().open()
@@ -268,12 +269,34 @@ class SamsungTVArt(SamsungTVWSConnection):
             return next(iter(item for item in data if item['item'] == setting), data)
         return data
 
+    def _slideshow_request(self, action, fields=None):
+        """
+        get or set the slideshow. Art API 2.03 (2021) calls it auto_rotation and 4.3.4.0 (2022) renamed it
+        slideshow, each TV fails the other name (error -9 or no answer), so send the name that works
+        """
+        if self._slideshow_name is None:
+            self._legacy_api()   # reads the art api version
+            self._slideshow_name = helper.slideshow_name(getattr(self, "_api_version", None))
+        error = None
+        for name in (self._slideshow_name, "slideshow" if self._slideshow_name == "auto_rotation" else "auto_rotation"):
+            try:
+                data = self._send_art_request(dict({"request": "{}_{}_status".format(action, name)}, **(fields or {})))
+            except exceptions.ResponseError as e:
+                data, error = None, e
+            if data:
+                self._slideshow_name = name
+                return data
+        if error:
+            raise error
+        raise AssertionError("no answer to {}_slideshow_status".format(action))
+
+    @staticmethod
+    def _slideshow_fields(duration, type, category):
+        return {"value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category),
+                "type": "shuffleslideshow" if type else "slideshow"}
+
     def get_auto_rotation_status(self):
-        data = self._send_art_request(
-            {"request": "get_auto_rotation_status"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("get")
 
     def set_auto_rotation_status(self, duration=0, type=True, category=2):
         '''
@@ -281,18 +304,10 @@ class SamsungTVArt(SamsungTVWSConnection):
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = self._send_art_request(
-            {"request": "set_auto_rotation_status", "value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category), "type": "shuffleslideshow" if type else "slideshow"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     def get_slideshow_status(self):
-        data = self._send_art_request(
-            {"request": "get_slideshow_status"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("get")
 
     def set_slideshow_status(self, duration=0, type=True, category=2):
         '''
@@ -300,11 +315,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = self._send_art_request(
-            {"request": "set_slideshow_status", "value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category), "type": "shuffleslideshow" if type else "slideshow"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     def get_brightness(self):
         try:

@@ -96,6 +96,14 @@ def is_legacy_art_api(version: Optional[str]) -> bool:
         return False
 
 
+def slideshow_name(version: Optional[str]) -> str:
+    """name of the slideshow requests: art API 2.03 (2021) calls it auto_rotation, 4.3.4.0 (2022) slideshow"""
+    try:
+        return "auto_rotation" if int(str(version).split(".")[0]) < 4 else "slideshow"
+    except ValueError:
+        return "slideshow"
+
+
 def thumbnail_name(content_id: str, data: Union[bytes, bytearray]) -> str:
     """file name for an inline thumbnail, from its magic number"""
     return "{}.{}".format(content_id, "png" if bytes(data[:4]) == b"\x89PNG" else "jpg")

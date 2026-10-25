@@ -92,6 +92,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self._art_cooldown = 0
         self._art_unavailable_until = 0.0
         self._thumbnail_list_only = False   # 2022+ Frames only answer get_thumbnail_list
+        self._slideshow_name: Optional[str] = None   # auto_rotation or slideshow, see _slideshow_request
         self.get_token()
             
     def get_token(self):
@@ -401,35 +402,45 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = json.loads(data['data'])
         return next(iter(item for item in data if item['item'] == setting), data)
 
+    async def _slideshow_request(self, action, fields=None):
+        """
+        get or set the slideshow. Art API 2.03 (2021) calls it auto_rotation and 4.3.4.0 (2022) renamed it
+        slideshow, each TV fails the other name (error -9 or no answer), so send the name that works
+        """
+        if self._slideshow_name is None:
+            await self._legacy_api()   # reads the art api version
+            self._slideshow_name = helper.slideshow_name(getattr(self, "_api_version", None))
+        error = None
+        for name in (self._slideshow_name, "slideshow" if self._slideshow_name == "auto_rotation" else "auto_rotation"):
+            try:
+                data = await self._send_art_request(dict({"request": "{}_{}_status".format(action, name)}, **(fields or {})))
+            except exceptions.ResponseError as e:
+                data, error = None, e
+            if data:
+                self._slideshow_name = name
+                return data
+        if error:
+            raise error
+        raise AssertionError("no answer to {}_slideshow_status".format(action))
+
+    @staticmethod
+    def _slideshow_fields(duration, type, category):
+        return {"value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category),
+                "type": "shuffleslideshow" if type else "slideshow"}
+
     async def get_auto_rotation_status(self):
-        data = await self._send_art_request(
-            {"request": "get_auto_rotation_status"}
-        )
-        assert data
-        return data
- 
+        return await self._slideshow_request("get")
+
     async def set_auto_rotation_status(self, duration=0, type=True, category=2):
         '''
         duration is "off" or "number" where number is duration in minutes. set 0 for 'off'
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = await self._send_art_request(
-            {   "request": "set_auto_rotation_status",
-                "value": str(duration) if duration > 0 else "off",
-                "category_id": "MY-C000{}".format(category),
-                "type": "shuffleslideshow" if type else "slideshow"
-            }
-        )
-        assert data
-        return data
+        return await self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     async def get_slideshow_status(self):
-        data = await self._send_art_request(
-            {"request": "get_slideshow_status"}
-        )
-        assert data
-        return data
+        return await self._slideshow_request("get")
 
     async def set_slideshow_status(self, duration=0, type=True, category=2):
         '''
@@ -437,15 +448,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = await self._send_art_request(
-            {   "request": "set_slideshow_status",
-                "value": str(duration) if duration > 0 else "off",
-                "category_id": "MY-C000{}".format(category),
-                "type": "shuffleslideshow" if type else "slideshow"
-            }
-        )
-        assert data
-        return data
+        return await self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     async def get_brightness(self):
         data = await self._send_art_request(
