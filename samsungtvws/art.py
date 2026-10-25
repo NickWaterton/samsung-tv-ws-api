@@ -21,7 +21,7 @@ import uuid
 import requests
 import websocket
 
-from . import exceptions, helper
+from . import exceptions, helper, ipcontrol
 from .command import SamsungTVCommand
 from .connection import SamsungTVWSConnection
 from .event import D2D_SERVICE_MESSAGE_EVENT, MS_CHANNEL_READY_EVENT
@@ -141,7 +141,44 @@ class SamsungTVArt(SamsungTVWSConnection):
 
     def supported(self) -> bool:
         data = self._get_rest_api().rest_device_info()
-        return data.get("device", {}).get("FrameTVSupport") == "true"
+        if data.get("device", {}).get("FrameTVSupport") == "true":
+            return True
+        # some TV's with art mode (eg S95H) report FrameTVSupport false, so ask the art channel
+        if data.get("device", {}).get("PowerState", "off") == "on":
+            return self._try_get_artmode() is not None
+        return False
+
+    def _try_get_artmode(self) -> Optional[str]:
+        """get_artmode(), returning None instead of raising if the art channel does not answer"""
+        try:
+            return self.get_artmode()
+        except Exception as e:
+            _LOGGING.debug("art channel did not answer: %s", e)
+            self.close()
+        return None
+
+    def get_power_state(self, ip_control: Optional[ipcontrol.SamsungTVIPControl] = None) -> str:
+        """
+        returns one of 'off', 'standby', 'tv', 'art' or 'on' (on, but art mode unknown)
+        ip_control: optional paired SamsungTVIPControl, the most reliable source
+        NOTE: set a timeout on this object, or the art channel can block when the TV is in standby
+        """
+        ip_state = None
+        if ip_control is not None:
+            try:
+                ip_state = ip_control.get_power_state()
+                if ip_state != ipcontrol.POWER_OFF:
+                    return ip_state
+            except ipcontrol.IPControlError as e:
+                _LOGGING.debug("IP Control failed: %s", e)
+        try:
+            rest_info = self._get_rest_api().rest_device_info()
+        except exceptions.HttpApiError:
+            rest_info = None
+        artmode = None
+        if rest_info and rest_info.get("device", {}).get("PowerState", "on") in ("on", "standby"):
+            artmode = self._try_get_artmode()
+        return ipcontrol.derive_power_state(rest_info, artmode, ip_state)
 
     def get_api_version(self):
         try:

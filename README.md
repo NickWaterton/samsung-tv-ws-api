@@ -217,6 +217,29 @@ logging.info(info)
 tv.art().set_photo_filter('SAM-F0206', 'ink')
 ```
 
+### Power State and IP Control
+
+`get_power_state()` returns one of `off`, `standby`, `tv`, `art`, or `on` (on, but art mode could not be determined). It combines the REST api, the art channel and, if you have paired it, Samsung IP Control.
+
+IP Control (JSON-RPC on port 1516, 1515 on pre 2020 TV's) is the most reliable source of power state, and can also switch inputs and power the TV on and off without SmartThings. Enable it on the TV in *Settings > General > Network > Expert Settings > IP Remote*. Pairing only works when the TV is on and **not** in art mode, press Allow on the TV.
+
+```python
+from samsungtvws import SamsungTVWS
+from samsungtvws.ipcontrol import SamsungTVIPControl
+
+ipc = SamsungTVIPControl('192.168.xxx.xxx', token_file='ipcontrol_token.txt')
+if not ipc.token:
+    ipc.pair()                      # press Allow on the TV
+
+tv = SamsungTVWS('192.168.xxx.xxx')
+print(tv.art().get_power_state(ipc))   # eg 'art'
+ipc.set_input_source('HDMI2')       # only works when watching TV, not in art mode
+```
+
+For asyncio use `SamsungTVAsyncIPControl` with `SamsungTVAsyncArt.get_power_state()`.
+
+Notes from testing 2021 and 2022 Frames: in standby the 2022 still answers IP Control with `powerOff` but keeps reporting art mode on, the 2021 refuses the connection. 2025 Frames report REST `PowerState: standby` while in art mode, `in_artmode()` and `get_power_state()` allow for this.
+
 ### Async
 
 Examples are available in the examples folder: `async_remote.py`, `async_rest.py`
