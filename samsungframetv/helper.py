@@ -120,7 +120,7 @@ def has_artmode_settings(version: Optional[str]) -> bool:
         return True
 
 
-# 2.03 answers get_brightness and get_color_temperature, the others are tried in case it has them too
+# each has its own request on art API 2.03 (seen on a 2021 Frame)
 ART_SETTINGS_REQUESTED_ONE_BY_ONE = ("brightness", "color_temperature", "motion_sensitivity", "motion_timer", "brightness_sensor_setting")
 
 

@@ -402,7 +402,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 _LOGGING.debug("get_%s: %s", item, e)
                 continue
             if data:
-                items.append(dict({"item": item}, **{k: data[k] for k in ("value", "min", "max") if k in data}))
+                # brightness_sensor_setting sends its value as status
+                values = dict(data, value=data["status"]) if "value" not in data and "status" in data else data
+                items.append(dict({"item": item}, **{k: values[k] for k in ("value", "min", "max", "valid_values") if k in values}))
         return items
 
     async def get_artmode_settings(self, setting=''):

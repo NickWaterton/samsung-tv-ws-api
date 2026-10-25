@@ -229,7 +229,10 @@ async def test_artmode_settings_on_both_versions(path: Path) -> None:
     tv = art_tv(recorded["rest"], replies_from_report(recorded))
     tv._api_version = recorded["art_api_version"]
     assert await tv.get_artmode_settings("brightness") == {"item": "brightness", "value": "0", "min": "0", "max": "10"}
-    assert {"item": "brightness", "value": "0", "min": "0", "max": "10"} in await tv.get_artmode_settings()
+    settings = {item["item"]: item for item in await tv.get_artmode_settings()}
+    assert list(settings) == ["brightness", "color_temperature", "motion_sensitivity", "motion_timer", "brightness_sensor_setting"]
+    assert settings["brightness_sensor_setting"]["value"] == "off"
+    assert "valid_values" in settings["motion_timer"]
 
 
 @pytest.mark.asyncio
