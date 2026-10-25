@@ -2,6 +2,9 @@ name: Publish to PyPI
 
 # Runs when a GitHub release is published. Builds samsungframetv and the
 # samsungframetv-compat shim, then uploads both with PyPI trusted publishing.
+# PyPI needs a different trusted publisher configuration for each project, so
+# samsungframetv uses the `pypi` environment and samsungframetv-compat uses
+# `pypi-compat`.
 
 # yamllint disable-line rule:truthy
 on:
@@ -25,8 +28,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip build twine
           python -m build -o dist .
-          python -m build -o dist compat
-          twine check dist/*
+          python -m build -o dist-compat compat
+          twine check dist/* dist-compat/*
 
       - name: Check the release tag matches the version
         if: github.event_name == 'release'
@@ -44,6 +47,11 @@ jobs:
           name: dist
           path: dist/
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-compat
+          path: dist-compat/
+
   publish:
     needs: build
     if: github.event_name == 'release'
@@ -55,6 +63,23 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-compat:
+    # after samsungframetv, which it depends on
+    needs: publish
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: pypi-compat
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-compat
           path: dist/
 
       - name: Publish to PyPI
