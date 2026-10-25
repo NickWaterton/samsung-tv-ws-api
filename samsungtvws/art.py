@@ -102,7 +102,10 @@ class SamsungTVArt(SamsungTVWSConnection):
             self._websocket_event(event, response)
             _LOGGING.debug('event: {}'.format(event))
             if event == D2D_SERVICE_MESSAGE_EVENT:
-                return json.loads(response["data"])
+                data = json.loads(response["data"])
+                if response.get("binary"):
+                    data["binary"] = response["binary"]    # older art API's send files inline
+                return data
         except websocket.WebSocketTimeoutException as e:
             raise exceptions.TimeoutError('Websocket Time out: {}'.format(e)) from e
         return {}
@@ -181,6 +184,16 @@ class SamsungTVArt(SamsungTVWSConnection):
             artmode = self._try_get_artmode()
         return ipcontrol.derive_power_state(rest_info, artmode, ip_state)
 
+    def _legacy_api(self) -> bool:
+        """2017/2018 Frames (art API below 2) upload and send thumbnails in one websocket message"""
+        if getattr(self, "_api_version", None) is None:
+            try:
+                self._api_version = self.get_api_version()
+            except Exception as e:
+                _LOGGING.debug("could not get art api version: %s", e)
+                return False
+        return helper.is_legacy_art_api(self._api_version)
+
     def get_api_version(self):
         try:
             data = self._send_art_request(
@@ -193,6 +206,7 @@ class SamsungTVArt(SamsungTVWSConnection):
                 {"request": "get_api_version"}
             )
         assert data
+        self._api_version = data["version"]
         return data["version"]
 
     def get_device_info(self):
@@ -394,6 +408,11 @@ class SamsungTVArt(SamsungTVWSConnection):
                 }
             )
             assert data
+            if data.get("binary"):
+                # older art API's send the thumbnail inline
+                thumbnail_data = bytearray(data["binary"])
+                thumbnail_data_dict[helper.thumbnail_name(content_id, thumbnail_data)] = thumbnail_data
+                continue
             conn_info = json.loads(data["conn_info"])
 
             art_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -480,6 +499,9 @@ class SamsungTVArt(SamsungTVWSConnection):
         if date is None:
             date = datetime.now().strftime("%Y:%m:%d %H:%M:%S")
 
+        if self._legacy_api():
+            return self._upload_binary(b"".join(chunker(file)), matte, file_type)
+
         data = self._send_art_request(
             {
                 "request": "send_image",
@@ -523,6 +545,22 @@ class SamsungTVArt(SamsungTVWSConnection):
             art_socket.send(chunk)
         data = self.wait_for_response("image_added")
         return data["content_id"] if data else None
+
+    def _upload_binary(self, data, matte, file_type):
+        """upload in one binary websocket message, as SmartThings does on older art API's (0.97, 1.07)"""
+        upload_id = self.get_uuid()
+        request = {
+            "request": "send_image",
+            "file_type": "JPEG" if file_type == "jpg" else file_type.upper(),
+            "matte_id": matte or "none",
+            "id": upload_id,
+        }
+        if self.connection is None:
+            self.open()
+        assert self.connection
+        self.connection.send_binary(helper.binary_send_image(request, data))
+        response = self.wait_for_response("image_added", upload_id)
+        return response["content_id"] if response else None
 
     def delete(self, content_id):
         return self.delete_list([content_id])
@@ -594,7 +632,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             {"request": "get_matte_list"}
         )
         assert data
-        return (json.loads(data["matte_type_list"]), json.loads(data.get("matte_color_list", "[]"))) if include_colour else json.loads(data["matte_type_list"])
+        return helper.parse_matte_list(data, include_colour)
 
     def change_matte(self, content_id, matte_id=None, portrait_matte=None):
         '''

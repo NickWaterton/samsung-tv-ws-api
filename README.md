@@ -145,6 +145,10 @@ logging.info(info)
 Art mode has been updated to support all Frame TV's including 2021/22/23 and 2024 models.
 **NOTE:** The async library is more reliable/robust than the regular library, so I reccomend you use that if possible. See the `async_art` examples.
 
+Older Frames (2017 and 2018, art API below 2, eg `0.97` or `1.07`) handle uploads and thumbnails differently. `upload()` sends the image in one binary websocket message, as the SmartThings app does, and `get_thumbnail()` reads thumbnails that arrive inline. This is chosen automatically from `get_api_version()`. `get_matte_list()` also accepts the 2018 reply format (`matte_types`). These paths are based on reports from 2017 and 2018 owners and have not been tested here, so please open an issue with debug logs if they don't work on your TV.
+
+If the TV rejects the connection with `ms.channel.timeOut`, the library raises `ChannelTimeoutError` (a `ConnectionFailure`). This usually means the token is missing, or belongs to another TV, so use a separate token file for each TV.
+
 If you use and like this library for art mode, [Buy me a coffee](https://paypal.me/NWaterton).
 
 TVs that support art mode (such as The Frame) can be controlled as follows:

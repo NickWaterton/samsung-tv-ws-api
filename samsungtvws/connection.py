@@ -21,6 +21,7 @@ from .command import SamsungTVCommand, SamsungTVSleepCommand
 from .event import (
     IGNORE_EVENTS_AT_STARTUP,
     MS_CHANNEL_CONNECT_EVENT,
+    MS_CHANNEL_TIMEOUT,
     MS_CHANNEL_UNAUTHORIZED,
     MS_ERROR_EVENT,
 )
@@ -66,23 +67,26 @@ class SamsungTVWSBaseConnection:
         return self.port == 8002
 
     def _format_websocket_url(self, app: str) -> str:
+        token = self._get_token()
         params = {
-            "host": self.host,
+            "host": helper.format_host(self.host),
             "port": self.port,
             "app": app,
             "name": helper.serialize_string(self.name),
-            "token": self._get_token(),
+            "token": token,
         }
 
         if self._is_ssl_connection():
-            return self._SSL_URL_FORMAT.format(**params)
+            url = self._SSL_URL_FORMAT.format(**params)
+            # do not send token=None when there is no token yet
+            return url if token else url.split("&token=")[0]
         else:
             return self._URL_FORMAT.format(**params)
 
     def _format_rest_url(self, route: str = "") -> str:
         params = {
             "protocol": "https" if self._is_ssl_connection() else "http",
-            "host": self.host,
+            "host": helper.format_host(self.host),
             "port": self.port,
             "route": route,
         }
@@ -171,12 +175,20 @@ class SamsungTVWSConnection(SamsungTVWSBaseConnection):
             self._websocket_event(event, response)
 
         if event == MS_CHANNEL_UNAUTHORIZED:
-            self.close()
+            connection.close()
             raise exceptions.UnauthorizedError(response)
+
+        if event == MS_CHANNEL_TIMEOUT:
+            connection.close()
+            _LOGGING.warning(
+                "%s did not accept the connection (ms.channel.timeOut): token missing or for another TV, "
+                "or Allow not pressed on the TV", self.host
+            )
+            raise exceptions.ChannelTimeoutError(response)
 
         if event != MS_CHANNEL_CONNECT_EVENT:
             # Unexpected event received during connection routine
-            self.close()
+            connection.close()
             raise exceptions.ConnectionFailure(response)
 
         self._check_for_token(response)
