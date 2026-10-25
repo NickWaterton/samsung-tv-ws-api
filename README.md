@@ -2,7 +2,7 @@
     <img src="https://user-images.githubusercontent.com/5860071/47255992-611d9b00-d481-11e8-965d-d9816f254be2.png" width="300px" border="0" />
     <br/>
     <a href="https://pypi.org/project/samsungframetv/">
-        <img src="https://img.shields.io/pypi/v/samsungframetv.svg?style=flat-square" alt="Version">
+        <img src="https://img.shields.io/pypi/v/samsungframetv.svg?style=flat-square&label=PyPI" alt="Version">
     </a>
     Samsung Smart TV WS API wrapper
 </p>
