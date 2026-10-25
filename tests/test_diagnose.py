@@ -71,6 +71,11 @@ def test_redact() -> None:
     assert redacted["device"]["model"] == "18_KANTM2_FRAME"
     assert json.loads(redacted["isSupport"]) == {"FrameTVSupport": "true"}
     assert diagnose.redact({"id": "", "token": None, "n": 5}) == {"id": "", "token": None, "n": 5}
+    # an art API version looks like an ip address
+    assert diagnose.redact({"version": "4.3.4.0", "message": "from 10.0.0.5 and 172.20.1.2"}) == {
+        "version": "4.3.4.0",
+        "message": "from <ip> and <ip>",
+    }
 
 
 @pytest.mark.asyncio
@@ -133,3 +138,26 @@ async def test_replay_device_report(path: Path) -> None:
         assert report["steps"][name]["ok"] == step["ok"], name
         if step["ok"] and name not in ("available",):
             assert report["steps"][name]["result"] == step["result"], name
+
+
+@pytest.mark.asyncio
+async def test_thumbnail_falls_back_to_thumbnail_list() -> None:
+    """a 2022 Frame (art API 4.3.4.0) never answers get_thumbnail"""
+    tv = art_tv(REST_2018, {"get_thumbnail": [None]})
+    tv._api_version = "4.3.4.0"
+    tv.get_thumbnail_list = AsyncMock(return_value={"MY_F0001.jpg": JPEG})  # type: ignore[method-assign]
+    assert await tv.get_thumbnail("MY_F0001") == JPEG
+    assert await tv.get_thumbnail(["MY_F0001"], as_dict=True) == {"MY_F0001.jpg": JPEG}
+    assert tv._thumbnail_list_only
+    assert tv.get_thumbnail_list.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_raw_content_list_is_shortened() -> None:
+    items = [{"content_id": "MY_F{:04}".format(n), "category_id": "MY-C0002"} for n in range(20)]
+    tv = art_tv(REST_2018, {"get_content_list": [{"content_list": json.dumps(items)}]})
+    recorder = diagnose._Recorder(tv)
+    assert len(await tv.available()) == 20
+    response = recorder.raw[0]["response"]
+    assert response["content_list_count"] == 20
+    assert len(json.loads(response["content_list"])) == diagnose.RAW_CONTENT_LIST_ITEMS

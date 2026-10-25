@@ -27,9 +27,11 @@ REPORT_FORMAT = 1
 
 _UUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 _MAC = re.compile(r"\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b")
-_IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+# private and link local addresses only, so versions such as 4.3.4.0 are kept
+_IPV4 = re.compile(r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01])|169\.254)\.\d{1,3}\.\d{1,3}\b")
 # values that identify the TV or its owner, whatever they look like
-_PRIVATE_KEYS = {"duid", "id", "udn", "wifiMac", "ip", "token", "deviceName", "name", "uri", "request_id", "connection_id"}
+_PRIVATE_KEYS = {"duid", "id", "udn", "wifiMac", "ip", "token", "deviceName", "name", "uri", "request_id", "connection_id",
+                 "target_client_id"}
 
 
 def redact(value: Any) -> Any:
@@ -51,9 +53,23 @@ def redact(value: Any) -> Any:
     return value
 
 
+RAW_CONTENT_LIST_ITEMS = 5
+
+
 def _summarise_binary(response: Any) -> Any:
     if isinstance(response, dict) and isinstance(response.get("binary"), (bytes, bytearray)):
         response = dict(response, binary="<{} bytes>".format(len(response["binary"])))
+    return response
+
+
+def _shorten_content_list(response: Any) -> Any:
+    """the content list can hold hundreds of items, a few show the format"""
+    if isinstance(response, dict) and isinstance(response.get("content_list"), str):
+        try:
+            items = json.loads(response["content_list"])
+            response = dict(response, content_list=json.dumps(items[:RAW_CONTENT_LIST_ITEMS]), content_list_count=len(items))
+        except ValueError:
+            pass
     return response
 
 
@@ -71,7 +87,7 @@ class _Recorder:
             started = time.monotonic()
             try:
                 response = await send(request_data, *args, **kwargs)
-                entry["response"] = _summarise_binary(response)
+                entry["response"] = _shorten_content_list(_summarise_binary(response))
                 return response
             except Exception as e:
                 entry["error"] = repr(e)
