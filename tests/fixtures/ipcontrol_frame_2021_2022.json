@@ -1,0 +1,401 @@
+{
+  "2021_art": {
+    "powerControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "power": "powerOn"
+      }
+    },
+    "artModeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "artMode": "artModeOn"
+      }
+    },
+    "getTVStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "internal",
+        "volume": 14,
+        "mute": "muteOff",
+        "pictureSize": "16:9",
+        "pictureMode": "Ambient",
+        "soundMode": "Amplify",
+        "inputSource": "HDMI1"
+      }
+    },
+    "getVideoStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "contrast": 45,
+        "sharpness": 0,
+        "brightness": 0,
+        "color": 25,
+        "tint": 0
+      }
+    },
+    "getDeviceInformation": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "inputSourceControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "inputSource": "HDMI1"
+      }
+    },
+    "muteControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "mute": "muteOff"
+      }
+    },
+    "directVolumeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "volume": 14
+      }
+    },
+    "speakerSelectControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "Internal"
+      }
+    }
+  },
+  "2021_on": {
+    "powerControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "power": "powerOn"
+      }
+    },
+    "artModeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "artMode": "artModeOff"
+      }
+    },
+    "getTVStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "external",
+        "volume": 0,
+        "mute": "muteOff",
+        "pictureSize": "16:9",
+        "pictureMode": "Movie",
+        "soundMode": "ExternalStandard",
+        "inputSource": "HDMI1"
+      }
+    },
+    "getVideoStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "contrast": 45,
+        "sharpness": 0,
+        "brightness": 0,
+        "color": 26,
+        "tint": 0
+      }
+    },
+    "getDeviceInformation": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "inputSourceControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "inputSource": "HDMI1"
+      }
+    },
+    "muteControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "mute": "muteOff"
+      }
+    },
+    "directVolumeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32002,
+        "message": "Server error",
+        "data": "Failed"
+      }
+    },
+    "speakerSelectControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "External"
+      }
+    }
+  },
+  "2021_standby": {
+    "powerControl": "ERROR: timed out",
+    "artModeControl": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it",
+    "getTVStates": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it",
+    "getVideoStates": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it",
+    "getDeviceInformation": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it",
+    "inputSourceControl": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it",
+    "muteControl": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it",
+    "directVolumeControl": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it",
+    "speakerSelectControl": "ERROR: [WinError 10061] No connection could be made because the target machine actively refused it"
+  },
+  "2022_art": {
+    "powerControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "power": "powerOn"
+      }
+    },
+    "artModeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "artMode": "artModeOn"
+      }
+    },
+    "getTVStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "internal",
+        "volume": 21,
+        "mute": "muteOff",
+        "pictureSize": "16:9",
+        "pictureMode": "Ambient",
+        "soundMode": "Standard",
+        "inputSource": "HDMI1"
+      }
+    },
+    "getVideoStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "contrast": 45,
+        "sharpness": 0,
+        "brightness": 0,
+        "color": 25,
+        "tint": 0
+      }
+    },
+    "getDeviceInformation": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "inputSourceControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "muteControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "mute": "muteOff"
+      }
+    },
+    "directVolumeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "speakerSelectControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    }
+  },
+  "2022_on": {
+    "powerControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "power": "powerOn"
+      }
+    },
+    "artModeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "artMode": "artModeOff"
+      }
+    },
+    "getTVStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "internal",
+        "volume": 21,
+        "mute": "muteOff",
+        "pictureSize": "16:9",
+        "pictureMode": "Movie",
+        "soundMode": "Standard",
+        "inputSource": "HDMI1"
+      }
+    },
+    "getVideoStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "contrast": 45,
+        "sharpness": 0,
+        "brightness": 0,
+        "color": 25,
+        "tint": 0
+      }
+    },
+    "getDeviceInformation": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "inputSourceControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "inputSource": "HDMI1"
+      }
+    },
+    "muteControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "mute": "muteOff"
+      }
+    },
+    "directVolumeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "volume": 21
+      }
+    },
+    "speakerSelectControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "Internal"
+      }
+    }
+  },
+  "2022_standby": {
+    "powerControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "power": "powerOff"
+      }
+    },
+    "artModeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "artMode": "artModeOn"
+      }
+    },
+    "getTVStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "speakerSelect": "internal",
+        "volume": 21,
+        "mute": "muteOn",
+        "pictureSize": "16:9",
+        "pictureMode": "Ambient",
+        "soundMode": "Standard",
+        "inputSource": "HDMI1"
+      }
+    },
+    "getVideoStates": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "contrast": 45,
+        "sharpness": 0,
+        "brightness": 0,
+        "color": 25,
+        "tint": 0
+      }
+    },
+    "getDeviceInformation": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "inputSourceControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "muteControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "result": {
+        "mute": "muteOn"
+      }
+    },
+    "directVolumeControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    },
+    "speakerSelectControl": {
+      "jsonrpc": "2.0",
+      "id": "1",
+      "error": {
+        "code": -32601,
+        "message": "Method not found"
+      }
+    }
+  }
+}

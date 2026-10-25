@@ -26,6 +26,7 @@ from .remote import SamsungTVWS
 from .event import D2D_SERVICE_MESSAGE_EVENT, MS_CHANNEL_READY_EVENT
 from .async_rest import SamsungTVAsyncRest
 from .helper import get_ssl_context, is_true
+from . import ipcontrol
 
 _LOGGING = logging.getLogger(__name__)
 
@@ -206,7 +207,39 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
 
     async def supported(self) -> bool:
         data = await self._get_device_info()
-        return data.get("device", {}).get("FrameTVSupport") == "true"
+        if data.get("device", {}).get("FrameTVSupport") == "true":
+            return True
+        # some TV's with art mode (eg S95H) report FrameTVSupport false, so ask the art channel
+        if data.get("device", {}).get("PowerState", "off") == "on":
+            return await self._try_get_artmode() is not None
+        return False
+
+    async def _try_get_artmode(self, timeout=5) -> Optional[str]:
+        """get_artmode(), returning None instead of raising if the art channel does not answer"""
+        try:
+            return await asyncio.wait_for(self.get_artmode(), timeout)
+        except Exception as e:
+            _LOGGING.debug("art channel did not answer: %s", e)
+        return None
+
+    async def get_power_state(self, ip_control: Optional[ipcontrol.SamsungTVAsyncIPControl] = None) -> str:
+        """
+        returns one of 'off', 'standby', 'tv', 'art' or 'on' (on, but art mode unknown)
+        ip_control: optional paired SamsungTVAsyncIPControl, the most reliable source
+        """
+        ip_state = None
+        if ip_control is not None:
+            try:
+                ip_state = await ip_control.async_get_power_state()
+                if ip_state != ipcontrol.POWER_OFF:
+                    return ip_state
+            except ipcontrol.IPControlError as e:
+                _LOGGING.debug("IP Control failed: %s", e)
+        rest_info = await self._get_device_info() or None
+        artmode = None
+        if rest_info and rest_info.get("device", {}).get("PowerState", "on") in ("on", "standby"):
+            artmode = await self._try_get_artmode()
+        return ipcontrol.derive_power_state(rest_info, artmode, ip_state)
         
     async def on(self) -> bool:
         data = await self._get_device_info()
@@ -216,7 +249,12 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return await self.on() and self.art_mode
         
     async def in_artmode(self) -> bool:
-        return await self.on() and await self.get_artmode() == 'on'
+        data = await self._get_device_info()
+        power = data.get("device", {}).get("PowerState", "off")
+        # 2025+ Frames report PowerState 'standby' while in art mode (issue #33)
+        if power == "on" or (power == "standby" and ipcontrol.model_year(data) >= 25):
+            return await self.get_artmode() == 'on'
+        return False
         
     async def get_api_version(self):
         data = await self._send_art_request(
