@@ -15,4 +15,4 @@
 
 # version 4.1.0 (in development) diagnose tool, get_thumbnail() falls back to get_thumbnail_list() on 2022+ Frames
 
-__version__ = '4.1.0.dev1'
+__version__ = '4.1.0.dev2'
