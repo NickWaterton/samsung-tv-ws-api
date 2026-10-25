@@ -14,6 +14,7 @@ import logging
 import random
 from pathlib import Path
 import socket
+import time
 from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlparse
 import uuid
@@ -184,6 +185,17 @@ class SamsungTVArt(SamsungTVWSConnection):
         if rest_info and rest_info.get("device", {}).get("PowerState", "on") in ("on", "standby"):
             artmode = self._try_get_artmode()
         return ipcontrol.derive_power_state(rest_info, artmode, ip_state)
+
+    def _open_d2d_socket(self, conn_info, secured=None):
+        """connect to the socket the TV named in conn_info for a thumbnail or upload transfer"""
+        if secured is None:
+            secured = conn_info.get("secured", False)
+        art_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if secured:
+            time.sleep(helper.D2D_SECURED_CONNECT_DELAY)
+            art_socket = get_ssl_context().wrap_socket(art_socket)
+        art_socket.connect((conn_info["ip"], int(conn_info["port"])))
+        return art_socket
 
     def _legacy_api(self) -> bool:
         """2017/2018 Frames (art API below 2) upload and send thumbnails in one websocket message"""
@@ -371,9 +383,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
         assert data
         conn_info = json.loads(data["conn_info"])
-        art_socket_raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        art_socket = get_ssl_context().wrap_socket(art_socket_raw) if conn_info.get('secured', False) else art_socket_raw
-        art_socket.connect((conn_info["ip"], int(conn_info["port"])))
+        art_socket = self._open_d2d_socket(conn_info)
         total_num_thumbnails = 1
         current_thumb = -1
         thumbnail_data_dict = {}
@@ -416,8 +426,7 @@ class SamsungTVArt(SamsungTVWSConnection):
                 continue
             conn_info = json.loads(data["conn_info"])
 
-            art_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            art_socket.connect((conn_info["ip"], int(conn_info["port"])))
+            art_socket = self._open_d2d_socket(conn_info, secured=False)
             header_len = int.from_bytes(art_socket.recv(4), "big")
             header = json.loads(art_socket.recv(header_len))
 
@@ -535,9 +544,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             }
         )
 
-        art_socket_raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        art_socket = get_ssl_context().wrap_socket(art_socket_raw) if conn_info.get("secured", False) else art_socket_raw  
-        art_socket.connect((conn_info["ip"], int(conn_info["port"])))
+        art_socket = self._open_d2d_socket(conn_info)
         art_socket.send(len(header).to_bytes(4, "big"))
         art_socket.send(header.encode("ascii"))
         #art_socket.send(file)
