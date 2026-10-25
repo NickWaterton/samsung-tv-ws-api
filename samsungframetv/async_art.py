@@ -92,6 +92,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self._art_cooldown = 0
         self._art_unavailable_until = 0.0
         self._thumbnail_list_only = False   # 2022+ Frames only answer get_thumbnail_list
+        self._slideshow_name: Optional[str] = None   # auto_rotation or slideshow, see _slideshow_request
         self.get_token()
             
     def get_token(self):
@@ -389,47 +390,86 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         assert data
         return data
         
+    async def _artmode_settings_one_by_one(self, setting=''):
+        """the get_artmode_settings list, from the requests art API 2.03 has for each setting"""
+        items = []
+        for item in helper.ART_SETTINGS_REQUESTED_ONE_BY_ONE:
+            if setting and item != setting:
+                continue
+            try:
+                data = await self._send_art_request({"request": "get_{}".format(item)})
+            except exceptions.ResponseError as e:
+                _LOGGING.debug("get_%s: %s", item, e)
+                continue
+            if data:
+                # brightness_sensor_setting sends its value as status
+                values = dict(data, value=data["status"]) if "value" not in data and "status" in data else data
+                items.append(dict({"item": item}, **{k: values[k] for k in ("value", "min", "max", "valid_values") if k in values}))
+        return items
+
     async def get_artmode_settings(self, setting=''):
         '''
         setting can be any of 'brightness', 'color_temperature', 'motion_sensitivity',
         'motion_timer', or 'brightness_sensor_setting'
+        art API 4.3.4.0 (2022) added get_artmode_settings, earlier versions (2.03) return error -9, so the
+        list is built from get_brightness and get_color_temperature, which they answer
         '''
-        data = await self._send_art_request(
-            {"request": "get_artmode_settings"}
-        )
-        assert data
-        data = json.loads(data['data'])
+        await self._legacy_api()   # reads the art api version
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            try:
+                data = await self._send_art_request(
+                    {"request": "get_artmode_settings"}
+                )
+                assert data
+                data = json.loads(data['data'])
+            except exceptions.ResponseError:
+                data = await self._artmode_settings_one_by_one(setting)
+                if not data:
+                    raise
+        else:
+            data = await self._artmode_settings_one_by_one(setting)
+            assert data
         return next(iter(item for item in data if item['item'] == setting), data)
 
+    async def _slideshow_request(self, action, fields=None):
+        """
+        get or set the slideshow. Art API 2.03 (2021) calls it auto_rotation and 4.3.4.0 (2022) renamed it
+        slideshow, each TV fails the other name (error -9 or no answer), so send the name that works
+        """
+        if self._slideshow_name is None:
+            await self._legacy_api()   # reads the art api version
+            self._slideshow_name = helper.slideshow_name(getattr(self, "_api_version", None))
+        error = None
+        for name in (self._slideshow_name, "slideshow" if self._slideshow_name == "auto_rotation" else "auto_rotation"):
+            try:
+                data = await self._send_art_request(dict({"request": "{}_{}_status".format(action, name)}, **(fields or {})))
+            except exceptions.ResponseError as e:
+                data, error = None, e
+            if data:
+                self._slideshow_name = name
+                return data
+        if error:
+            raise error
+        raise AssertionError("no answer to {}_slideshow_status".format(action))
+
+    @staticmethod
+    def _slideshow_fields(duration, type, category):
+        return {"value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category),
+                "type": "shuffleslideshow" if type else "slideshow"}
+
     async def get_auto_rotation_status(self):
-        data = await self._send_art_request(
-            {"request": "get_auto_rotation_status"}
-        )
-        assert data
-        return data
- 
+        return await self._slideshow_request("get")
+
     async def set_auto_rotation_status(self, duration=0, type=True, category=2):
         '''
         duration is "off" or "number" where number is duration in minutes. set 0 for 'off'
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = await self._send_art_request(
-            {   "request": "set_auto_rotation_status",
-                "value": str(duration) if duration > 0 else "off",
-                "category_id": "MY-C000{}".format(category),
-                "type": "shuffleslideshow" if type else "slideshow"
-            }
-        )
-        assert data
-        return data
+        return await self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     async def get_slideshow_status(self):
-        data = await self._send_art_request(
-            {"request": "get_slideshow_status"}
-        )
-        assert data
-        return data
+        return await self._slideshow_request("get")
 
     async def set_slideshow_status(self, duration=0, type=True, category=2):
         '''
@@ -437,22 +477,17 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = await self._send_art_request(
-            {   "request": "set_slideshow_status",
-                "value": str(duration) if duration > 0 else "off",
-                "category_id": "MY-C000{}".format(category),
-                "type": "shuffleslideshow" if type else "slideshow"
-            }
-        )
-        assert data
-        return data
+        return await self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     async def get_brightness(self):
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        await self._legacy_api()   # reads the art api version
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                return await self.get_artmode_settings('brightness')
         data = await self._send_art_request(
             {"request": "get_brightness"}
         )
-        if not data:
-            data = await self.get_artmode_settings('brightness')
         assert data
         return data
 
@@ -465,11 +500,14 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return data
         
     async def get_color_temperature(self):
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        await self._legacy_api()   # reads the art api version
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                return await self.get_artmode_settings('color_temperature')
         data = await self._send_art_request(
             {"request": "get_color_temperature"}
         )
-        if not data:
-            data = await self.get_artmode_settings('color_temperature')
         assert data
         return data
 
@@ -540,6 +578,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
     async def get_thumbnail(self, content_id_list=[], as_dict=False):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
+        if not self._thumbnail_list_only:
+            await self._legacy_api()   # reads the art api version
+            self._thumbnail_list_only = helper.uses_thumbnail_list(getattr(self, "_api_version", None))
         if self._thumbnail_list_only:
             thumbnails = await self.get_thumbnail_list(content_id_list)
             return thumbnails if as_dict else list(thumbnails.values()) if len(content_id_list) > 1 else next(iter(thumbnails.values()), None)

@@ -8,6 +8,7 @@ Copyright (C) 2024,2025 Nick Waterton <n.waterton@outlook.com>
 SPDX-License-Identifier: LGPL-3.0
 """
 
+import contextlib
 from datetime import datetime
 import json
 import logging
@@ -73,6 +74,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         self.art_uuid = str(uuid.uuid4())
         self._rest_api: Optional[SamsungTVRest] = None
         self.pending_requests = None
+        self._slideshow_name: Optional[str] = None   # auto_rotation or slideshow, see _slideshow_request
 
     def open(self) -> websocket.WebSocket:
         super().open()
@@ -254,26 +256,78 @@ class SamsungTVArt(SamsungTVWSConnection):
         assert data
         return data
 
+    def _artmode_settings_one_by_one(self, setting=''):
+        """the get_artmode_settings list, from the requests art API 2.03 has for each setting"""
+        items = []
+        for item in helper.ART_SETTINGS_REQUESTED_ONE_BY_ONE:
+            if setting and item != setting:
+                continue
+            try:
+                data = self._send_art_request({"request": "get_{}".format(item)})
+            except exceptions.ResponseError as e:
+                _LOGGING.debug("get_%s: %s", item, e)
+                continue
+            if data:
+                # brightness_sensor_setting sends its value as status
+                values = dict(data, value=data["status"]) if "value" not in data and "status" in data else data
+                items.append(dict({"item": item}, **{k: values[k] for k in ("value", "min", "max", "valid_values") if k in values}))
+        return items
+
     def get_artmode_settings(self, setting=''):
         '''
         setting can be any of 'brightness', 'color_temperature', 'motion_sensitivity',
         'motion_timer', or 'brightness_sensor_setting'
+        art API 4.3.4.0 (2022) added get_artmode_settings, earlier versions (2.03) return error -9, so the
+        list is built from get_brightness and get_color_temperature, which they answer
         '''
-        data = self._send_art_request(
-            {"request": "get_artmode_settings"}
-        )
+        self._legacy_api()   # reads the art api version
+        if not helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            items = self._artmode_settings_one_by_one(setting)
+            assert items
+            return next(iter(item for item in items if item['item'] == setting), items)
+        try:
+            data = self._send_art_request(
+                {"request": "get_artmode_settings"}
+            )
+        except exceptions.ResponseError:
+            items = self._artmode_settings_one_by_one(setting)
+            if not items:
+                raise
+            return next(iter(item for item in items if item['item'] == setting), items)
         assert data
         if 'data' in data.keys():
             data = json.loads(data["data"])
             return next(iter(item for item in data if item['item'] == setting), data)
         return data
 
+    def _slideshow_request(self, action, fields=None):
+        """
+        get or set the slideshow. Art API 2.03 (2021) calls it auto_rotation and 4.3.4.0 (2022) renamed it
+        slideshow, each TV fails the other name (error -9 or no answer), so send the name that works
+        """
+        if self._slideshow_name is None:
+            self._legacy_api()   # reads the art api version
+            self._slideshow_name = helper.slideshow_name(getattr(self, "_api_version", None))
+        error = None
+        for name in (self._slideshow_name, "slideshow" if self._slideshow_name == "auto_rotation" else "auto_rotation"):
+            try:
+                data = self._send_art_request(dict({"request": "{}_{}_status".format(action, name)}, **(fields or {})))
+            except exceptions.ResponseError as e:
+                data, error = None, e
+            if data:
+                self._slideshow_name = name
+                return data
+        if error:
+            raise error
+        raise AssertionError("no answer to {}_slideshow_status".format(action))
+
+    @staticmethod
+    def _slideshow_fields(duration, type, category):
+        return {"value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category),
+                "type": "shuffleslideshow" if type else "slideshow"}
+
     def get_auto_rotation_status(self):
-        data = self._send_art_request(
-            {"request": "get_auto_rotation_status"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("get")
 
     def set_auto_rotation_status(self, duration=0, type=True, category=2):
         '''
@@ -281,18 +335,10 @@ class SamsungTVArt(SamsungTVWSConnection):
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = self._send_art_request(
-            {"request": "set_auto_rotation_status", "value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category), "type": "shuffleslideshow" if type else "slideshow"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     def get_slideshow_status(self):
-        data = self._send_art_request(
-            {"request": "get_slideshow_status"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("get")
 
     def set_slideshow_status(self, duration=0, type=True, category=2):
         '''
@@ -300,16 +346,16 @@ class SamsungTVArt(SamsungTVWSConnection):
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
         '''
-        data = self._send_art_request(
-            {"request": "set_slideshow_status", "value": str(duration) if duration > 0 else "off", "category_id": "MY-C000{}".format(category), "type": "shuffleslideshow" if type else "slideshow"}
-        )
-        assert data
-        return data
+        return self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     def get_brightness(self):
-        try:
-            data = self.get_artmode_settings('brightness')
-        except exceptions.ResponseError:
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        self._legacy_api()   # reads the art api version
+        data = None
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                data = self.get_artmode_settings('brightness')
+        if not data:
             data = self._send_art_request(
                 {"request": "get_brightness"}
             )
@@ -325,9 +371,13 @@ class SamsungTVArt(SamsungTVWSConnection):
         return data
 
     def get_color_temperature(self):
-        try:
-            data = self.get_artmode_settings('color_temperature')
-        except exceptions.ResponseError:
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        self._legacy_api()   # reads the art api version
+        data = None
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                data = self.get_artmode_settings('color_temperature')
+        if not data:
             data = self._send_art_request(
                 {"request": "get_color_temperature"}
             )
@@ -404,6 +454,10 @@ class SamsungTVArt(SamsungTVWSConnection):
     def get_thumbnail(self, content_id_list=[], as_dict=False):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
+        self._legacy_api()   # reads the art api version
+        if helper.uses_thumbnail_list(getattr(self, "_api_version", None)):
+            thumbnails = self.get_thumbnail_list(content_id_list)
+            return thumbnails if as_dict else list(thumbnails.values()) if len(content_id_list) > 1 else next(iter(thumbnails.values()), None)
         thumbnail_data_dict = {}
         thumbnail_data = None
         for content_id in content_id_list:

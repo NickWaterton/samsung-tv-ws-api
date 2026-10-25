@@ -105,10 +105,12 @@ async def test_recorder_keeps_raw_replies() -> None:
     assert await tv.get_api_version() == "1.07"
     with pytest.raises(AssertionError):
         await tv.get_slideshow_status()
-    assert [entry["request"]["request"] for entry in recorder.raw] == ["api_version", "get_api_version", "get_slideshow_status"]
+    # art API 1.07 tries the older auto_rotation name first
+    assert [entry["request"]["request"] for entry in recorder.raw] == ["api_version", "get_api_version", "get_auto_rotation_status",
+                                                                      "get_slideshow_status"]
     assert "ResponseError" in recorder.raw[0]["error"]
     assert recorder.raw[1]["response"] == {"version": "1.07"}
-    assert recorder.raw[2]["response"] is None
+    assert recorder.raw[3]["response"] is None
 
 
 def replies_from_report(report: Dict[str, Any]) -> Dict[str, List[Any]]:
@@ -132,7 +134,7 @@ def without_count(result: Any) -> Any:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("path", DEVICES, ids=[p.stem for p in DEVICES])
 async def test_replay_device_report(path: Path) -> None:
-    """every check that worked on the real TV still works with its recorded replies"""
+    """every check that worked on the real TV still works with its recorded replies, a check that failed may now work"""
     recorded = json.loads(path.read_text())
     tv = art_tv(recorded["rest"], replies_from_report(recorded))
     with patch("samsungframetv.async_art.asyncio.open_connection", side_effect=OSError("no thumbnail server in tests")):
@@ -141,16 +143,18 @@ async def test_replay_device_report(path: Path) -> None:
     for name, step in recorded["steps"].items():
         if name in ("get_thumbnail", "ipcontrol_tv_states") or name not in report["steps"]:
             continue
-        assert report["steps"][name]["ok"] == step["ok"], name
-        if step["ok"] and name not in ("available",):
+        if not step["ok"]:
+            continue
+        assert report["steps"][name]["ok"], name
+        if name not in ("available",):
             assert without_count(report["steps"][name]["result"]) == without_count(step["result"]), name
 
 
 @pytest.mark.asyncio
 async def test_thumbnail_falls_back_to_thumbnail_list() -> None:
-    """a 2022 Frame (art API 4.3.4.0) never answers get_thumbnail"""
+    """a TV that doesn't answer get_thumbnail, whatever its art api version"""
     tv = art_tv(REST_2018, {"get_thumbnail": [None]})
-    tv._api_version = "4.3.4.0"
+    tv._api_version = "3.0"
     tv.get_thumbnail_list = AsyncMock(return_value={"MY_F0001.jpg": JPEG})  # type: ignore[method-assign]
     assert await tv.get_thumbnail("MY_F0001") == JPEG
     assert await tv.get_thumbnail(["MY_F0001"], as_dict=True) == {"MY_F0001.jpg": JPEG}
@@ -167,3 +171,89 @@ async def test_raw_content_list_is_shortened() -> None:
     response = recorder.raw[0]["response"]
     assert response["content_list_count"] == 20
     assert len(json.loads(response["content_list"])) == diagnose.RAW_CONTENT_LIST_ITEMS
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", DEVICES, ids=[p.stem for p in DEVICES])
+async def test_slideshow_names_both_work(path: Path) -> None:
+    """2021 (art API 2.03) only answers auto_rotation, 2022 (4.3.4.0) only slideshow, both names work on both"""
+    recorded = json.loads(path.read_text())
+    tv = art_tv(recorded["rest"], replies_from_report(recorded))
+    recorder = diagnose._Recorder(tv)
+    first = await tv.get_slideshow_status()
+    assert await tv.get_auto_rotation_status() == first
+    requests = [entry["request"]["request"] for entry in recorder.raw if "slideshow" in entry["request"]["request"] or "rotation" in entry["request"]["request"]]
+    name = "get_auto_rotation_status" if recorded["art_api_version"].startswith("2.") else "get_slideshow_status"
+    assert requests == [name, name]
+
+
+@pytest.mark.asyncio
+async def test_slideshow_falls_back_to_other_name() -> None:
+    error = exceptions.ResponseError("set_slideshow_status request failed with error number -9")
+    tv = art_tv(REST_2018, {"set_slideshow_status": [error], "set_auto_rotation_status": [{"value": "10"}]})
+    tv._api_version = "4.0"   # a version not seen yet, guessed as slideshow
+    recorder = diagnose._Recorder(tv)
+    assert await tv.set_slideshow_status(10, False, 4) == {"value": "10"}
+    assert recorder.raw[1]["request"] == {"request": "set_auto_rotation_status", "value": "10", "category_id": "MY-C0004", "type": "slideshow"}
+    assert tv._slideshow_name == "auto_rotation"
+
+
+def test_sync_slideshow_uses_auto_rotation_on_2021() -> None:
+    from samsungframetv.art import SamsungTVArt
+
+    tv = SamsungTVArt("127.0.0.1", port=8002, token="token")
+    tv._api_version = "2.03"
+    with patch.object(SamsungTVArt, "_send_art_request", return_value={"value": "off"}) as send:
+        assert tv.get_slideshow_status() == {"value": "off"}
+    send.assert_called_once_with({"request": "get_auto_rotation_status"})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", DEVICES, ids=[p.stem for p in DEVICES])
+async def test_brightness_asks_artmode_settings_first(path: Path) -> None:
+    """get_artmode_settings arrived in art API 4.3.4.0, which no longer answers get_brightness"""
+    recorded = json.loads(path.read_text())
+    tv = art_tv(recorded["rest"], replies_from_report(recorded))
+    tv._api_version = recorded["art_api_version"]
+    recorder = diagnose._Recorder(tv)
+    assert (await tv.get_brightness())["value"] == "0"
+    requests = [entry["request"]["request"] for entry in recorder.raw]
+    assert requests == ["get_brightness" if recorded["art_api_version"].startswith("2.") else "get_artmode_settings"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", DEVICES, ids=[p.stem for p in DEVICES])
+async def test_artmode_settings_on_both_versions(path: Path) -> None:
+    """art API 2.03 has no get_artmode_settings, the list is built from the requests it has for each setting"""
+    recorded = json.loads(path.read_text())
+    tv = art_tv(recorded["rest"], replies_from_report(recorded))
+    tv._api_version = recorded["art_api_version"]
+    assert await tv.get_artmode_settings("brightness") == {"item": "brightness", "value": "0", "min": "0", "max": "10"}
+    settings = {item["item"]: item for item in await tv.get_artmode_settings()}
+    assert list(settings) == ["brightness", "color_temperature", "motion_sensitivity", "motion_timer", "brightness_sensor_setting"]
+    assert settings["brightness_sensor_setting"]["value"] == "off"
+    assert "valid_values" in settings["motion_timer"]
+
+
+@pytest.mark.asyncio
+async def test_thumbnail_list_used_straight_away_on_art_api_4() -> None:
+    """art API 4.3.4.0 (2022) replaced get_thumbnail with get_thumbnail_list"""
+    tv = art_tv(REST_2018, {})
+    tv._api_version = "4.3.4.0"
+    recorder = diagnose._Recorder(tv)
+    tv.get_thumbnail_list = AsyncMock(return_value={"MY_F0001.jpg": JPEG})  # type: ignore[method-assign]
+    assert await tv.get_thumbnail("MY_F0001") == JPEG
+    assert recorder.raw == []
+
+
+def test_sync_thumbnail_list_on_art_api_4() -> None:
+    from samsungframetv.art import SamsungTVArt
+
+    tv = SamsungTVArt("127.0.0.1", port=8002, token="token")
+    tv._api_version = "4.3.4.0"
+    with patch.object(SamsungTVArt, "get_thumbnail_list", return_value={"MY_F0001.jpg": JPEG}) as get_list, \
+            patch.object(SamsungTVArt, "_send_art_request") as send:
+        assert tv.get_thumbnail("MY_F0001") == JPEG
+        assert tv.get_thumbnail(["MY_F0001"], as_dict=True) == {"MY_F0001.jpg": JPEG}
+    assert get_list.call_count == 2
+    send.assert_not_called()
