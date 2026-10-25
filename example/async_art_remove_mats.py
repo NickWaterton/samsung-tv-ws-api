@@ -26,7 +26,7 @@ def parse_args(mat_types, mat_colors, matte):
     '''
     check mat is valid, and return mat and color
     '''
-    if matte != None:
+    if matte is not None:
         if matte not in ['none', 'org']:
             if matte in mat_types:
                 mat = matte
@@ -58,7 +58,7 @@ def get_target_matte(matte, color, art, landscape=True):
             target_matte_type = '{}_{}'.format(matte, color)
         else:
             if org_matte_id == 'none':
-                logging.warning(f"can't change color/type of {'landscape' if landscape else 'portrait'} mat: {org_matte_id} for {art["content_id"]} to {matte or color}")
+                logging.warning(f"can't change color/type of {'landscape' if landscape else 'portrait'} mat: {org_matte_id} for {art['content_id']} to {matte or color}")
             else:
                 org_mat, org_color = org_matte_id.split('_')
                 if color is None:
@@ -107,8 +107,8 @@ async def main():
                 if art["matte_id"] != target_matte_type or art["portrait_matte_id"] != portrait_target_matte_type:
                     logging.info(
                         f"Setting landscape matte to {target_matte_type}"
-                        f"{" and portrait matte to {}".format(portrait_target_matte_type) if portrait_target_matte_type != art["portrait_matte_id"] else ""} "
-                        f"for {art["content_id"]}"
+                        f"{' and portrait matte to {}'.format(portrait_target_matte_type) if portrait_target_matte_type != art['portrait_matte_id'] else ''} "
+                        f"for {art['content_id']}"
                     )
                     try:
                         await tv.change_matte(art["content_id"], target_matte_type, None if portrait_target_matte_type == art["portrait_matte_id"] else portrait_target_matte_type)

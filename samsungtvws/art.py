@@ -95,6 +95,7 @@ class SamsungTVArt(SamsungTVWSConnection):
 
     def get_websocket_message(self):
         try:
+            assert self.connection
             raw_data = self.connection.recv()
             response = helper.process_api_response(raw_data)
             event = response.get("event", "*")
@@ -103,7 +104,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             if event == D2D_SERVICE_MESSAGE_EVENT:
                 return json.loads(response["data"])
         except websocket.WebSocketTimeoutException as e:
-            raise exceptions.TimeoutError('Websocket Time out: {}'.format(e))
+            raise exceptions.TimeoutError('Websocket Time out: {}'.format(e)) from e
         return {}
 
     def wait_for_response(self, wait_for_event, request_uuid=None):
@@ -593,7 +594,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             {"request": "get_matte_list"}
         )
         assert data
-        return (json.loads(data["matte_type_list"]), json.loads(data.get("matte_color_list"))) if include_colour else json.loads(data["matte_type_list"])
+        return (json.loads(data["matte_type_list"]), json.loads(data.get("matte_color_list", "[]"))) if include_colour else json.loads(data["matte_type_list"])
 
     def change_matte(self, content_id, matte_id=None, portrait_matte=None):
         '''

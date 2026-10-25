@@ -5,3 +5,5 @@ rules:
     max-spaces-inside: 1
   document-start:
     present: false
+  line-length:
+    level: warning
