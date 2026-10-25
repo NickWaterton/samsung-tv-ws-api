@@ -123,6 +123,12 @@ def replies_from_report(report: Dict[str, Any]) -> Dict[str, List[Any]]:
     return replies
 
 
+def without_count(result: Any) -> Any:
+    """the recorded replies hold a shortened content list, so its count can differ"""
+    result = diagnose._shorten_content_list(result)
+    return {k: v for k, v in result.items() if k != "content_list_count"} if isinstance(result, dict) else result
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("path", DEVICES, ids=[p.stem for p in DEVICES])
 async def test_replay_device_report(path: Path) -> None:
@@ -137,7 +143,7 @@ async def test_replay_device_report(path: Path) -> None:
             continue
         assert report["steps"][name]["ok"] == step["ok"], name
         if step["ok"] and name not in ("available",):
-            assert report["steps"][name]["result"] == step["result"], name
+            assert without_count(report["steps"][name]["result"]) == without_count(step["result"]), name
 
 
 @pytest.mark.asyncio

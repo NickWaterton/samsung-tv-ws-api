@@ -110,7 +110,7 @@ async def _step(results: Dict[str, Any], name: str, call: Callable[[], Awaitable
     started = time.monotonic()
     try:
         value = await asyncio.wait_for(call(), timeout)
-        results[name] = {"ok": True, "result": _summarise_binary(value)}
+        results[name] = {"ok": True, "result": _shorten_content_list(_summarise_binary(value))}
         return value
     except Exception as e:
         results[name] = {"ok": False, "error": repr(e)}

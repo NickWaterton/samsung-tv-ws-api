@@ -1,0 +1,653 @@
+{
+  "report_format": 1,
+  "library_version": "4.1.0.dev1",
+  "created": "2026-10-25T20:16:40Z",
+  "model": "22_PONTUSM_FTV",
+  "model_name": "QN43LS03BAFXZC",
+  "model_year": 22,
+  "art_api_version": "4.3.4.0",
+  "rest": {
+    "device": {
+      "EdgeBlendingSupport": "false",
+      "EdgeBlendingSupportGroup": "0",
+      "FrameTVSupport": "true",
+      "GamePadSupport": "true",
+      "ImeSyncedSupport": "true",
+      "Language": "en_US",
+      "OS": "Tizen",
+      "PowerState": "on",
+      "TokenAuthSupport": "true",
+      "VoiceSupport": "true",
+      "WallScreenRatio": "-1",
+      "WallService": "false",
+      "countryCode": "CA",
+      "description": "Samsung DTV RCR",
+      "developerIP": "<ip>",
+      "developerMode": "0",
+      "duid": "<redacted>",
+      "firmwareVersion": "Unknown",
+      "id": "<redacted>",
+      "ip": "<redacted>",
+      "model": "22_PONTUSM_FTV",
+      "modelName": "QN43LS03BAFXZC",
+      "name": "<redacted>",
+      "networkType": "wired",
+      "resolution": "3840x2160",
+      "smartHubAgreement": "true",
+      "type": "Samsung SmartTV",
+      "udn": "<redacted>",
+      "wifiMac": "<redacted>"
+    },
+    "id": "<redacted>",
+    "isSupport": "{\"DMP_DRM_PLAYREADY\": \"false\", \"DMP_DRM_WIDEVINE\": \"false\", \"DMP_available\": \"true\", \"EDEN_available\": \"true\", \"FrameTVSupport\": \"true\", \"ImeSyncedSupport\": \"true\", \"TokenAuthSupport\": \"true\", \"remote_available\": \"true\", \"remote_fourDirections\": \"true\", \"remote_touchPad\": \"true\", \"remote_voiceControl\": \"true\"}",
+    "name": "<redacted>",
+    "remote": "1.0",
+    "type": "Samsung SmartTV",
+    "uri": "<redacted>",
+    "version": "2.0.25"
+  },
+  "steps": {
+    "rest_device_info": {
+      "ok": true,
+      "result": {
+        "device": {
+          "EdgeBlendingSupport": "false",
+          "EdgeBlendingSupportGroup": "0",
+          "FrameTVSupport": "true",
+          "GamePadSupport": "true",
+          "ImeSyncedSupport": "true",
+          "Language": "en_US",
+          "OS": "Tizen",
+          "PowerState": "on",
+          "TokenAuthSupport": "true",
+          "VoiceSupport": "true",
+          "WallScreenRatio": "-1",
+          "WallService": "false",
+          "countryCode": "CA",
+          "description": "Samsung DTV RCR",
+          "developerIP": "<ip>",
+          "developerMode": "0",
+          "duid": "<redacted>",
+          "firmwareVersion": "Unknown",
+          "id": "<redacted>",
+          "ip": "<redacted>",
+          "model": "22_PONTUSM_FTV",
+          "modelName": "QN43LS03BAFXZC",
+          "name": "<redacted>",
+          "networkType": "wired",
+          "resolution": "3840x2160",
+          "smartHubAgreement": "true",
+          "type": "Samsung SmartTV",
+          "udn": "<redacted>",
+          "wifiMac": "<redacted>"
+        },
+        "id": "<redacted>",
+        "isSupport": "{\"DMP_DRM_PLAYREADY\": \"false\", \"DMP_DRM_WIDEVINE\": \"false\", \"DMP_available\": \"true\", \"EDEN_available\": \"true\", \"FrameTVSupport\": \"true\", \"ImeSyncedSupport\": \"true\", \"TokenAuthSupport\": \"true\", \"remote_available\": \"true\", \"remote_fourDirections\": \"true\", \"remote_touchPad\": \"true\", \"remote_voiceControl\": \"true\"}",
+        "name": "<redacted>",
+        "remote": "1.0",
+        "type": "Samsung SmartTV",
+        "uri": "<redacted>",
+        "version": "2.0.25"
+      },
+      "seconds": 0.19
+    },
+    "supported": {
+      "ok": true,
+      "result": true,
+      "seconds": 0.13
+    },
+    "get_api_version": {
+      "ok": true,
+      "result": "4.3.4.0",
+      "seconds": 2.06
+    },
+    "legacy_art_api": {
+      "ok": true,
+      "result": false,
+      "seconds": 0.0
+    },
+    "get_device_info": {
+      "ok": true,
+      "result": {
+        "event": "get_device_info",
+        "request_id": "<redacted>",
+        "current_rotation_status": 1,
+        "support_brightness_sensor": "TRUE",
+        "support_motion_sensor": "TRUE",
+        "resolution_type": "UHD",
+        "support_color_tone": "TRUE",
+        "tv_flash_size": 16,
+        "support_myshelf": "FALSE"
+      },
+      "seconds": 1.01
+    },
+    "get_artmode": {
+      "ok": true,
+      "result": "off",
+      "seconds": 1.01
+    },
+    "in_artmode": {
+      "ok": true,
+      "result": false,
+      "seconds": 1.21
+    },
+    "get_power_state": {
+      "ok": true,
+      "result": "tv",
+      "seconds": 0.26
+    },
+    "get_current": {
+      "ok": true,
+      "result": {
+        "event": "get_current_artwork",
+        "request_id": "<redacted>",
+        "content_id": "SAM-S0397",
+        "matte_id": "none",
+        "portrait_matte_id": "shadowbox_polar",
+        "category_id": "MY-C0004",
+        "content_type": "artstore"
+      },
+      "seconds": 1.01
+    },
+    "available": {
+      "ok": true,
+      "result": {
+        "count": 204,
+        "categories": {
+          "MY-C0008": 67,
+          "MY-C0002": 71,
+          "MY-C0004": 65,
+          "MY-C0001": 1
+        },
+        "sample": [
+          {
+            "content_id": "SAM-S0397",
+            "category_id": "MY-C0008",
+            "slideshow": "true",
+            "matte_id": "none",
+            "portrait_matte_id": "shadowbox_polar",
+            "width": 3840,
+            "height": 2160,
+            "image_date": "",
+            "content_type": "server"
+          },
+          {
+            "content_id": "SAM-S5424",
+            "category_id": "MY-C0008",
+            "slideshow": "false",
+            "matte_id": "none",
+            "portrait_matte_id": "shadowbox_polar",
+            "width": 3840,
+            "height": 2160,
+            "image_date": "",
+            "content_type": "server"
+          },
+          {
+            "content_id": "SAM-S3459",
+            "category_id": "MY-C0008",
+            "slideshow": "false",
+            "matte_id": "shadowbox_polar",
+            "portrait_matte_id": "shadowbox_polar",
+            "width": 3840,
+            "height": 2560,
+            "image_date": "",
+            "content_type": "server"
+          }
+        ]
+      },
+      "seconds": 3.06
+    },
+    "get_matte_list": {
+      "ok": true,
+      "result": [
+        [
+          {
+            "matte_type": "none"
+          },
+          {
+            "matte_type": "modernthin"
+          },
+          {
+            "matte_type": "modern"
+          },
+          {
+            "matte_type": "modernwide"
+          },
+          {
+            "matte_type": "flexible"
+          },
+          {
+            "matte_type": "shadowbox"
+          },
+          {
+            "matte_type": "panoramic"
+          },
+          {
+            "matte_type": "triptych"
+          },
+          {
+            "matte_type": "mix"
+          },
+          {
+            "matte_type": "squares"
+          }
+        ],
+        [
+          {
+            "color": "black",
+            "R": 34,
+            "G": 34,
+            "B": 33
+          },
+          {
+            "color": "neutral",
+            "R": 137,
+            "G": 136,
+            "B": 134
+          },
+          {
+            "color": "antique",
+            "R": 224,
+            "G": 219,
+            "B": 210
+          },
+          {
+            "color": "warm",
+            "R": 231,
+            "G": 231,
+            "B": 223
+          },
+          {
+            "color": "polar",
+            "R": 232,
+            "G": 230,
+            "B": 231
+          },
+          {
+            "color": "sand",
+            "R": 164,
+            "G": 145,
+            "B": 113
+          },
+          {
+            "color": "seafoam",
+            "R": 90,
+            "G": 104,
+            "B": 101
+          },
+          {
+            "color": "sage",
+            "R": 170,
+            "G": 176,
+            "B": 141
+          },
+          {
+            "color": "burgandy",
+            "R": 98,
+            "G": 39,
+            "B": 46
+          },
+          {
+            "color": "navy",
+            "R": 39,
+            "G": 53,
+            "B": 74
+          },
+          {
+            "color": "apricot",
+            "R": 239,
+            "G": 188,
+            "B": 96
+          },
+          {
+            "color": "byzantine",
+            "R": 136,
+            "G": 86,
+            "B": 137
+          },
+          {
+            "color": "lavender",
+            "R": 182,
+            "G": 171,
+            "B": 177
+          },
+          {
+            "color": "redorange",
+            "R": 219,
+            "G": 103,
+            "B": 66
+          },
+          {
+            "color": "skyblue",
+            "R": 105,
+            "G": 192,
+            "B": 211
+          },
+          {
+            "color": "turquoise",
+            "R": 46,
+            "G": 150,
+            "B": 141
+          }
+        ]
+      ],
+      "seconds": 1.01
+    },
+    "get_photo_filter_list": {
+      "ok": true,
+      "result": [
+        {
+          "filter_id": "None"
+        },
+        {
+          "filter_id": "Aqua"
+        },
+        {
+          "filter_id": "ArtDeco"
+        },
+        {
+          "filter_id": "Ink"
+        },
+        {
+          "filter_id": "Wash"
+        },
+        {
+          "filter_id": "Pastel"
+        },
+        {
+          "filter_id": "Feuve"
+        }
+      ],
+      "seconds": 1.01
+    },
+    "get_slideshow_status": {
+      "ok": true,
+      "result": {
+        "event": "get_slideshow_status",
+        "request_id": "<redacted>",
+        "value": "1440",
+        "category_id": "MY-C0004",
+        "sub_category_id": "",
+        "current_content_id": "SAM-S0397",
+        "type": "shuffleslideshow",
+        "content_list": "[{\"content_id\": \"SAM-S10000244\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000518\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0440\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10001733\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0441\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0335\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5825\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 5279, \"height\": 2970}, {\"content_id\": \"SAM-S5413\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000181\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S3145\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S2669\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10002951\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_antique\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000525\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0396\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10003226\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_antique\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5253\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000520\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5563\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5697\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5355\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000390\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"flexible_black\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000526\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000925\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000941\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000524\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000913\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000911\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5783\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10002175\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0398\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000113\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S1100951\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5254\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0623\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S2753\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10002250\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0357\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5699\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10001077\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10001747\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000937\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000519\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0358\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0328\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5493\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 5168, \"height\": 3448}, {\"content_id\": \"SAM-S0321\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10001729\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0408\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000243\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0397\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000523\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0621\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5476\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 4200, \"height\": 2362}, {\"content_id\": \"SAM-S3459\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2560}, {\"content_id\": \"SAM-S9831\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S2657\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5698\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5424\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0395\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S5807\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 5279, \"height\": 2970}, {\"content_id\": \"SAM-S10003230\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_antique\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000103\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0368\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3645, \"height\": 2160}, {\"content_id\": \"SAM-S9838\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10002265\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}]"
+      },
+      "seconds": 1.01
+    },
+    "get_auto_rotation_status": {
+      "ok": false,
+      "error": "AssertionError()",
+      "seconds": 3.02
+    },
+    "get_artmode_settings": {
+      "ok": true,
+      "result": [
+        {
+          "item": "brightness",
+          "value": "0",
+          "min": "0",
+          "max": "10"
+        },
+        {
+          "item": "color_temperature",
+          "value": "3",
+          "min": "-5",
+          "max": "5"
+        },
+        {
+          "item": "motion_sensitivity",
+          "value": "2",
+          "min": "1",
+          "max": "3"
+        },
+        {
+          "item": "motion_timer",
+          "value": "off",
+          "valid_values": "[\"off\", \"5\", \"15\", \"30\", \"60\", \"120\", \"240\"]"
+        },
+        {
+          "item": "brightness_sensor_setting",
+          "value": "off"
+        }
+      ],
+      "seconds": 1.01
+    },
+    "get_brightness": {
+      "ok": true,
+      "result": {
+        "item": "brightness",
+        "value": "0",
+        "min": "0",
+        "max": "10"
+      },
+      "seconds": 4.02
+    },
+    "get_thumbnail": {
+      "ok": true,
+      "result": {
+        "bytes": 66960,
+        "jpeg": true,
+        "png": false
+      },
+      "seconds": 4.11
+    },
+    "ipcontrol_tv_states": {
+      "ok": true,
+      "result": {
+        "speakerSelect": "internal",
+        "volume": 21,
+        "mute": "muteOff",
+        "pictureSize": "16:9",
+        "pictureMode": "Movie",
+        "soundMode": "Standard",
+        "inputSource": "HDMI1"
+      },
+      "seconds": 0.47
+    }
+  },
+  "raw": [
+    {
+      "request": {
+        "request": "get_artmode_status"
+      },
+      "response": {
+        "event": "get_artmode_status",
+        "request_id": "<redacted>",
+        "value": "off"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "api_version"
+      },
+      "response": {
+        "event": "api_version",
+        "request_id": "<redacted>",
+        "version": "4.3.4.0"
+      },
+      "seconds": 2.06
+    },
+    {
+      "request": {
+        "request": "get_device_info"
+      },
+      "response": {
+        "event": "get_device_info",
+        "request_id": "<redacted>",
+        "current_rotation_status": 1,
+        "support_brightness_sensor": "TRUE",
+        "support_motion_sensor": "TRUE",
+        "resolution_type": "UHD",
+        "support_color_tone": "TRUE",
+        "tv_flash_size": 16,
+        "support_myshelf": "FALSE"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_artmode_status"
+      },
+      "response": {
+        "event": "get_artmode_status",
+        "request_id": "<redacted>",
+        "value": "off"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_artmode_status"
+      },
+      "response": {
+        "event": "get_artmode_status",
+        "request_id": "<redacted>",
+        "value": "off"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_current_artwork"
+      },
+      "response": {
+        "event": "get_current_artwork",
+        "request_id": "<redacted>",
+        "content_id": "SAM-S0397",
+        "matte_id": "none",
+        "portrait_matte_id": "shadowbox_polar",
+        "category_id": "MY-C0004",
+        "content_type": "artstore"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_content_list",
+        "category": null
+      },
+      "response": {
+        "event": "get_content_list",
+        "request_id": "<redacted>",
+        "content_list": "[{\"content_id\": \"SAM-S0397\", \"category_id\": \"MY-C0008\", \"slideshow\": \"true\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160, \"image_date\": \"\", \"content_type\": \"server\"}, {\"content_id\": \"SAM-S5424\", \"category_id\": \"MY-C0008\", \"slideshow\": \"false\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160, \"image_date\": \"\", \"content_type\": \"server\"}, {\"content_id\": \"SAM-S3459\", \"category_id\": \"MY-C0008\", \"slideshow\": \"false\", \"matte_id\": \"shadowbox_polar\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2560, \"image_date\": \"\", \"content_type\": \"server\"}, {\"content_id\": \"MY_F0481\", \"category_id\": \"MY-C0008\", \"slideshow\": \"false\", \"matte_id\": \"none\", \"portrait_matte_id\": \"none\", \"width\": 3840, \"height\": 2156, \"image_date\": \"2025:07:23 12:18:41\", \"content_type\": \"mobile\"}, {\"content_id\": \"SAM-F0103\", \"category_id\": \"MY-C0008\", \"slideshow\": \"false\", \"matte_id\": \"modernthin_seafoam\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160, \"image_date\": \"\", \"content_type\": \"preinstall\"}]",
+        "content_list_count": 204
+      },
+      "seconds": 3.06
+    },
+    {
+      "request": {
+        "request": "get_matte_list"
+      },
+      "response": {
+        "event": "get_matte_list",
+        "request_id": "<redacted>",
+        "matte_type_list": "[{\"matte_type\": \"none\"}, {\"matte_type\": \"modernthin\"}, {\"matte_type\": \"modern\"}, {\"matte_type\": \"modernwide\"}, {\"matte_type\": \"flexible\"}, {\"matte_type\": \"shadowbox\"}, {\"matte_type\": \"panoramic\"}, {\"matte_type\": \"triptych\"}, {\"matte_type\": \"mix\"}, {\"matte_type\": \"squares\"}]",
+        "matte_color_list": "[{\"color\": \"black\", \"R\": 34, \"G\": 34, \"B\": 33}, {\"color\": \"neutral\", \"R\": 137, \"G\": 136, \"B\": 134}, {\"color\": \"antique\", \"R\": 224, \"G\": 219, \"B\": 210}, {\"color\": \"warm\", \"R\": 231, \"G\": 231, \"B\": 223}, {\"color\": \"polar\", \"R\": 232, \"G\": 230, \"B\": 231}, {\"color\": \"sand\", \"R\": 164, \"G\": 145, \"B\": 113}, {\"color\": \"seafoam\", \"R\": 90, \"G\": 104, \"B\": 101}, {\"color\": \"sage\", \"R\": 170, \"G\": 176, \"B\": 141}, {\"color\": \"burgandy\", \"R\": 98, \"G\": 39, \"B\": 46}, {\"color\": \"navy\", \"R\": 39, \"G\": 53, \"B\": 74}, {\"color\": \"apricot\", \"R\": 239, \"G\": 188, \"B\": 96}, {\"color\": \"byzantine\", \"R\": 136, \"G\": 86, \"B\": 137}, {\"color\": \"lavender\", \"R\": 182, \"G\": 171, \"B\": 177}, {\"color\": \"redorange\", \"R\": 219, \"G\": 103, \"B\": 66}, {\"color\": \"skyblue\", \"R\": 105, \"G\": 192, \"B\": 211}, {\"color\": \"turquoise\", \"R\": 46, \"G\": 150, \"B\": 141}]"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_photo_filter_list"
+      },
+      "response": {
+        "event": "get_photo_filter_list",
+        "request_id": "<redacted>",
+        "filter_list": "[{\"filter_id\": \"None\"}, {\"filter_id\": \"Aqua\"}, {\"filter_id\": \"ArtDeco\"}, {\"filter_id\": \"Ink\"}, {\"filter_id\": \"Wash\"}, {\"filter_id\": \"Pastel\"}, {\"filter_id\": \"Feuve\"}]"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_slideshow_status"
+      },
+      "response": {
+        "event": "get_slideshow_status",
+        "request_id": "<redacted>",
+        "value": "1440",
+        "category_id": "MY-C0004",
+        "sub_category_id": "",
+        "current_content_id": "SAM-S0397",
+        "type": "shuffleslideshow",
+        "content_list": "[{\"content_id\": \"SAM-S10000244\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10000518\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0440\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S10001733\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}, {\"content_id\": \"SAM-S0441\", \"category_id\": \"MY-C0004\", \"sub_category_id\": \"\", \"matte_id\": \"none\", \"portrait_matte_id\": \"shadowbox_polar\", \"width\": 3840, \"height\": 2160}]",
+        "content_list_count": 65
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_auto_rotation_status"
+      },
+      "response": null,
+      "seconds": 3.02
+    },
+    {
+      "request": {
+        "request": "get_artmode_settings"
+      },
+      "response": {
+        "event": "get_artmode_settings",
+        "request_id": "<redacted>",
+        "data": "[{\"item\": \"brightness\", \"value\": \"0\", \"min\": \"0\", \"max\": \"10\"}, {\"item\": \"color_temperature\", \"value\": \"3\", \"min\": \"-5\", \"max\": \"5\"}, {\"item\": \"motion_sensitivity\", \"value\": \"2\", \"min\": \"1\", \"max\": \"3\"}, {\"item\": \"motion_timer\", \"value\": \"off\", \"valid_values\": \"[\\\"off\\\", \\\"5\\\", \\\"15\\\", \\\"30\\\", \\\"60\\\", \\\"120\\\", \\\"240\\\"]\"}, {\"item\": \"brightness_sensor_setting\", \"value\": \"off\"}]"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_brightness"
+      },
+      "response": null,
+      "seconds": 3.01
+    },
+    {
+      "request": {
+        "request": "get_artmode_settings"
+      },
+      "response": {
+        "event": "get_artmode_settings",
+        "request_id": "<redacted>",
+        "data": "[{\"item\": \"brightness\", \"value\": \"0\", \"min\": \"0\", \"max\": \"10\"}, {\"item\": \"color_temperature\", \"value\": \"3\", \"min\": \"-5\", \"max\": \"5\"}, {\"item\": \"motion_sensitivity\", \"value\": \"2\", \"min\": \"1\", \"max\": \"3\"}, {\"item\": \"motion_timer\", \"value\": \"off\", \"valid_values\": \"[\\\"off\\\", \\\"5\\\", \\\"15\\\", \\\"30\\\", \\\"60\\\", \\\"120\\\", \\\"240\\\"]\"}, {\"item\": \"brightness_sensor_setting\", \"value\": \"off\"}]"
+      },
+      "seconds": 1.01
+    },
+    {
+      "request": {
+        "request": "get_thumbnail",
+        "content_id": "SAM-S0397",
+        "conn_info": {
+          "d2d_mode": "socket",
+          "connection_id": "<redacted>",
+          "id": "<redacted>"
+        }
+      },
+      "response": null,
+      "seconds": 3.02
+    },
+    {
+      "request": {
+        "request": "get_thumbnail_list",
+        "content_id_list": [
+          {
+            "content_id": "SAM-S0397"
+          }
+        ],
+        "conn_info": {
+          "d2d_mode": "socket",
+          "connection_id": "<redacted>",
+          "id": "<redacted>"
+        }
+      },
+      "response": {
+        "event": "get_thumbnail_list",
+        "request_id": "<redacted>",
+        "content_id": "SAM-S0397",
+        "file_type": "jpg",
+        "content_list": "[{\"content_id\": \"SAM-S0397\", \"file_type\": \"jpg\"}]",
+        "conn_info": "{\"contentInfo\": \"{\\\"d2d_mode\\\": \\\"socket\\\", \\\"connection_id\\\": \\\"\\\", \\\"request_id\\\": \\\"\\\", \\\"id\\\": \\\"<redacted>\\\", \\\"ConnectData\\\": null}\", \"event\": \"get_d2d_connection\", \"ip\": \"<redacted>\", \"port\": \"57442\", \"key\": \"q8zdashh\", \"stat\": \"ok\", \"mode\": \"socket\", \"secured\": true}",
+        "content_list_count": 1
+      },
+      "seconds": 1.01
+    }
+  ]
+}
