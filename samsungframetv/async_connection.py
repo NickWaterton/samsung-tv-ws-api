@@ -29,8 +29,8 @@ from .helper import get_ssl_context
 
 _LOGGING = logging.getLogger(__name__)
 
-DEFAULT_OPEN_TIMEOUT = 10   # connect and wait for ms.channel.connect, when no timeout is set
-PAIRING_TIMEOUT = 60        # time allowed to press Allow on the TV when there is no token
+DEFAULT_OPEN_TIMEOUT = connection.DEFAULT_OPEN_TIMEOUT
+PAIRING_TIMEOUT = connection.PAIRING_TIMEOUT
 
 
 class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
@@ -164,6 +164,38 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
 
         self.connection = None
         _LOGGING.debug("Connection closed.")
+
+    async def pair(self, timeout: float = PAIRING_TIMEOUT, force: bool = False) -> Optional[str]:
+        """
+        Get a token (port 8002) by opening the remote control channel, which shows the Allow prompt
+        on every model. Returns the token, which is also saved to token_file.
+        If there is a token already, it is checked first, and only asked for again if the TV
+        no longer accepts it (eg after a long power off). force: always ask again.
+        """
+        token = self._get_token()
+        if token and not force:
+            try:
+                return self._update_token(await self._open_pairing_channel(token, self.timeout or DEFAULT_OPEN_TIMEOUT)) or token
+            except exceptions.ConnectionFailure as e:
+                _LOGGING.info("%s did not accept the token (%r), asking for a new one", self.host, e)
+        _LOGGING.warning("%s: press Allow on the TV within %ds", self.host, timeout)
+        return self._update_token(await self._open_pairing_channel(None, timeout))
+
+    async def _open_pairing_channel(self, token: Optional[str], timeout: float) -> Optional[str]:
+        remote = SamsungTVWSAsyncConnection(
+            self.host, endpoint=connection.PAIRING_ENDPOINT, token=token, port=self.port, timeout=timeout, name=self.name
+        )
+        try:
+            await remote.open()
+        finally:
+            await remote.close()
+        return remote.token
+
+    def _update_token(self, token: Optional[str]) -> Optional[str]:
+        token = str(token) if token else None
+        if token and token != self._get_token():
+            self._set_token(token)
+        return token
 
     async def _reconnect(self) -> None:
         """drop a dead connection, open a new one, and resume listening if we were"""

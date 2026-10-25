@@ -240,6 +240,26 @@ For asyncio use `SamsungTVAsyncIPControl` with `SamsungTVAsyncArt.get_power_stat
 
 Notes from testing 2021 and 2022 Frames: in standby the 2022 still answers IP Control with `powerOff` but keeps reporting art mode on, the 2021 refuses the connection. 2025 Frames report REST `PowerState: standby` while in art mode, `in_artmode()` and `get_power_state()` allow for this.
 
+### Pairing and connection problems
+
+On port 8002 the TV gives each app a token the first time it connects, after you press Allow on the TV. The token is saved in `token_file`, so use a separate token file for each TV.
+
+Some models (for example 2017 and 2024 Frames) don't show the Allow prompt for the art channel. `pair()` opens the remote control channel instead, which shows it on every model. It works on any of the connection classes:
+
+```python
+tv = SamsungTVWS('192.168.xxx.xxx', port=8002, token_file='token_tv1.txt')
+token = tv.art().pair()          # press Allow on the TV
+
+art = SamsungTVAsyncArt('192.168.xxx.xxx', port=8002, token_file='token_tv1.txt')
+token = await art.pair(timeout=120)
+```
+
+If there is already a token, `pair()` checks it first and only asks again if the TV no longer accepts it. TV's can forget tokens after a long power off (issue #30). `pair(force=True)` always asks again.
+
+- `ChannelTimeoutError` (`ms.channel.timeOut`): the TV didn't accept the token. It is missing, belongs to another TV, or Allow wasn't pressed in time. Run `pair()`.
+- `UnauthorizedError` (`ms.channel.unauthorized`): the TV refused the app. Check *Settings > General > External Device Manager > Device Connection Manager*: set *Access Notification* to ask, and remove the app from the *Device List* if it was denied, then run `pair(force=True)`.
+- Holding `KEY_POWER` doesn't power off 2025 Frames, they treat it as a short press (issue #29). Use IP Control `power_off()` instead.
+
 ### Async
 
 Examples are available in the examples folder: `async_remote.py`, `async_rest.py`
