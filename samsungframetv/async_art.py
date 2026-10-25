@@ -547,6 +547,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
     async def get_thumbnail(self, content_id_list=[], as_dict=False):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
+        if not self._thumbnail_list_only:
+            await self._legacy_api()   # reads the art api version
+            self._thumbnail_list_only = helper.uses_thumbnail_list(getattr(self, "_api_version", None))
         if self._thumbnail_list_only:
             thumbnails = await self.get_thumbnail_list(content_id_list)
             return thumbnails if as_dict else list(thumbnails.values()) if len(content_id_list) > 1 else next(iter(thumbnails.values()), None)

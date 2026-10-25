@@ -158,6 +158,7 @@ def test_inline_thumbnail(connection: Mock) -> None:
             inline_thumbnail_frame(),
         ]
         tv_art = SamsungTVArt("127.0.0.1")
+        tv_art._api_version = "1.07"
         assert tv_art.get_thumbnail("MY_F0001") == bytearray(JPEG)
 
 

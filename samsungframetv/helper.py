@@ -104,6 +104,14 @@ def slideshow_name(version: Optional[str]) -> str:
         return "slideshow"
 
 
+def uses_thumbnail_list(version: Optional[str]) -> bool:
+    """art API 4.3.4.0 (2022) replaced get_thumbnail with get_thumbnail_list"""
+    try:
+        return int(str(version).split(".")[0]) >= 4
+    except ValueError:
+        return False
+
+
 def thumbnail_name(content_id: str, data: Union[bytes, bytearray]) -> str:
     """file name for an inline thumbnail, from its magic number"""
     return "{}.{}".format(content_id, "png" if bytes(data[:4]) == b"\x89PNG" else "jpg")

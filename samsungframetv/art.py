@@ -415,6 +415,10 @@ class SamsungTVArt(SamsungTVWSConnection):
     def get_thumbnail(self, content_id_list=[], as_dict=False):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
+        self._legacy_api()   # reads the art api version
+        if helper.uses_thumbnail_list(getattr(self, "_api_version", None)):
+            thumbnails = self.get_thumbnail_list(content_id_list)
+            return thumbnails if as_dict else list(thumbnails.values()) if len(content_id_list) > 1 else next(iter(thumbnails.values()), None)
         thumbnail_data_dict = {}
         thumbnail_data = None
         for content_id in content_id_list:

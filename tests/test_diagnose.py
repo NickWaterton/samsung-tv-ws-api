@@ -152,9 +152,9 @@ async def test_replay_device_report(path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_thumbnail_falls_back_to_thumbnail_list() -> None:
-    """a 2022 Frame (art API 4.3.4.0) never answers get_thumbnail"""
+    """a TV that doesn't answer get_thumbnail, whatever its art api version"""
     tv = art_tv(REST_2018, {"get_thumbnail": [None]})
-    tv._api_version = "4.3.4.0"
+    tv._api_version = "3.0"
     tv.get_thumbnail_list = AsyncMock(return_value={"MY_F0001.jpg": JPEG})  # type: ignore[method-assign]
     assert await tv.get_thumbnail("MY_F0001") == JPEG
     assert await tv.get_thumbnail(["MY_F0001"], as_dict=True) == {"MY_F0001.jpg": JPEG}
@@ -221,3 +221,27 @@ async def test_brightness_asks_artmode_settings_first(path: Path) -> None:
         assert requests == ["get_artmode_settings", "get_brightness"]
     else:
         assert requests == ["get_artmode_settings"]
+
+
+@pytest.mark.asyncio
+async def test_thumbnail_list_used_straight_away_on_art_api_4() -> None:
+    """art API 4.3.4.0 (2022) replaced get_thumbnail with get_thumbnail_list"""
+    tv = art_tv(REST_2018, {})
+    tv._api_version = "4.3.4.0"
+    recorder = diagnose._Recorder(tv)
+    tv.get_thumbnail_list = AsyncMock(return_value={"MY_F0001.jpg": JPEG})  # type: ignore[method-assign]
+    assert await tv.get_thumbnail("MY_F0001") == JPEG
+    assert recorder.raw == []
+
+
+def test_sync_thumbnail_list_on_art_api_4() -> None:
+    from samsungframetv.art import SamsungTVArt
+
+    tv = SamsungTVArt("127.0.0.1", port=8002, token="token")
+    tv._api_version = "4.3.4.0"
+    with patch.object(SamsungTVArt, "get_thumbnail_list", return_value={"MY_F0001.jpg": JPEG}) as get_list, \
+            patch.object(SamsungTVArt, "_send_art_request") as send:
+        assert tv.get_thumbnail("MY_F0001") == JPEG
+        assert tv.get_thumbnail(["MY_F0001"], as_dict=True) == {"MY_F0001.jpg": JPEG}
+    assert get_list.call_count == 2
+    send.assert_not_called()
