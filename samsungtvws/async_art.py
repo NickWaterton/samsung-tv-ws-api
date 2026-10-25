@@ -144,6 +144,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 self.pending_requests[request_uuid] = asyncio.Future()
             response = await asyncio.wait_for(self.pending_requests[request_uuid], timeout)
             data = json.loads(response["data"])
+            if response.get("binary"):
+                data["binary"] = response["binary"]    # older art API's send files inline
         except asyncio.exceptions.TimeoutError:
             pass
         self.pending_requests.pop(request_uuid, None)
@@ -313,15 +315,30 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return False
         
     async def get_api_version(self):
-        data = await self._send_art_request(
-            {"request": "get_api_version"}
-        )
-        if not data:
+        try:
+            # new api first, it answers quickly with an error on old TV's
             data = await self._send_art_request(
                 {"request": "api_version"}
             )
+        except exceptions.ResponseError:
+            data = None
+        if not data:
+            data = await self._send_art_request(
+                {"request": "get_api_version"}
+            )
         assert data
+        self._api_version = data["version"]
         return data["version"]
+
+    async def _legacy_api(self) -> bool:
+        """2017/2018 Frames (art API below 2) upload and send thumbnails in one websocket message"""
+        if getattr(self, "_api_version", None) is None:
+            try:
+                await self.get_api_version()
+            except Exception as e:
+                _LOGGING.debug("could not get art api version: %s", e)
+                return False
+        return helper.is_legacy_art_api(self._api_version)
 
     async def get_device_info(self):
         data = await self._send_art_request(
@@ -526,6 +543,11 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 }
             )
             assert data
+            if data.get("binary"):
+                # older art API's send the thumbnail inline
+                thumbnail_data = bytes(data["binary"])
+                thumbnail_data_dict[helper.thumbnail_name(content_id, thumbnail_data)] = thumbnail_data
+                continue
             conn_info = json.loads(data["conn_info"])
             reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']))
             header_len = int.from_bytes(await reader.readexactly(4), "big")
@@ -606,6 +628,10 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         if date is None:
             date = datetime.now().strftime("%Y:%m:%d %H:%M:%S")
 
+        if await self._legacy_api():
+            image = b"".join([chunk async for chunk in chunker(file)])
+            return await self._upload_binary(image, matte, file_type, timeout)
+
         data = await self._send_art_request(
             {
                 "request": "send_image",
@@ -649,6 +675,21 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         writer.close()
         data = await self.wait_for_response("image_added", timeout=timeout)
         return data["content_id"] if data else None
+
+    async def _upload_binary(self, data, matte, file_type, timeout=10):
+        """upload in one binary websocket message, as SmartThings does on older art API's (0.97, 1.07)"""
+        request = {
+            "request": "send_image",
+            "file_type": "JPEG" if file_type == "jpg" else file_type.upper(),
+            "matte_id": matte or "none",
+            "id": self.get_uuid(),
+        }
+        self.pending_requests["image_added"] = asyncio.Future()
+        await self.start_listening()
+        assert self.connection
+        await self.connection.send(helper.binary_send_image(request, data))
+        response = await self.wait_for_response("image_added", timeout=timeout)
+        return response["content_id"] if response else None
 
     async def delete(self, content_id):
         await self.delete_list([content_id])
@@ -717,7 +758,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             {"request": "get_matte_list"}
         )
         assert data
-        return (json.loads(data["matte_type_list"]), json.loads(data.get("matte_color_list", "[]"))) if include_colour else json.loads(data["matte_type_list"])
+        return helper.parse_matte_list(data, include_colour)
 
     async def change_matte(self, content_id, matte_id=None, portrait_matte=None):
         '''

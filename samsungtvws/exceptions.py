@@ -19,6 +19,16 @@ class UnauthorizedError(ConnectionFailure):
     pass
 
 
+class ChannelTimeoutError(ConnectionFailure):
+    """ms.channel.timeOut: the TV did not accept the connection.
+
+    Usually the token is missing or belongs to another TV, or Allow was not pressed on the TV.
+    Delete the token file and connect again to pair.
+    """
+
+    pass
+
+
 class ResponseError(Exception):
     """Error in response."""
 

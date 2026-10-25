@@ -154,6 +154,7 @@ def test_send_image_failure(connection: Mock) -> None:
             d2d_reply(sample=D2D_SERVICE_MESSAGE_SEND_IMAGE_ERROR),
         ]
         tv_art = SamsungTVArt("127.0.0.1")
+        tv_art._api_version = "4.3.4.0"     # D2D socket upload, skip the api_version request
 
         with pytest.raises(
             exceptions.ResponseError,

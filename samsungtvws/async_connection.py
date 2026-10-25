@@ -77,11 +77,17 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
             await connection.close()
             raise exceptions.UnauthorizedError(response)
 
+        if event == MS_CHANNEL_TIMEOUT:
+            await connection.close()
+            _LOGGING.warning(
+                "%s did not accept the connection (ms.channel.timeOut): token missing or for another TV, "
+                "or Allow not pressed on the TV", self.host
+            )
+            raise exceptions.ChannelTimeoutError(response)
+
         if event != MS_CHANNEL_CONNECT_EVENT:
             # Unexpected event received during connection routine
             await connection.close()
-            if event == MS_CHANNEL_TIMEOUT:
-                _LOGGING.debug("connection not accepted on TV, or token missing/incorrect")
             raise exceptions.ConnectionFailure(response)
 
         self._check_for_token(response)

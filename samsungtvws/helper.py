@@ -27,13 +27,102 @@ def serialize_string(string: Union[str, bytes]) -> str:
 
 
 def process_api_response(response: Union[str, bytes]) -> Dict[str, Any]:
-    _LOGGING.debug("Processing API response: %s", response)
+    """
+    Parse a websocket message. Older art API's (eg 0.97 and 1.07) send binary frames
+    with a JSON header followed by the file (eg a thumbnail), the file is returned in 'binary'.
+    """
+    _LOGGING.debug("Processing API response: %s", response[:1000] if isinstance(response, bytes) else response)
     try:
         return json.loads(response)  # type:ignore[no-any-return]
-    except json.JSONDecodeError as err:
+    except (json.JSONDecodeError, UnicodeDecodeError) as err:
+        if isinstance(response, (bytes, bytearray)):
+            frame = _split_json_and_binary(bytes(response))
+            if frame is not None:
+                return frame
         raise exceptions.ResponseError(
             "Failed to parse response from TV. Maybe feature not supported on this model"
         ) from err
+
+
+def _split_json_and_binary(buf: bytes) -> Optional[Dict[str, Any]]:
+    """JSON header followed by binary data, None if there is no JSON header"""
+    start = buf.find(b"{")
+    if start < 0:
+        return None
+    try:
+        # raw_decode stops at the end of the JSON object, and handles braces inside strings
+        frame, end = json.JSONDecoder().raw_decode(buf[start:].decode("utf-8", errors="surrogateescape"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(frame, dict):
+        return None
+    # surrogateescape round trips, so this is where the JSON ended in the original bytes
+    json_end = start + len(buf[start:].decode("utf-8", errors="surrogateescape")[:end].encode("utf-8", errors="surrogateescape"))
+    tail = buf[json_end:]
+    if tail.startswith(b"\n"):
+        tail = tail[1:]
+    if tail:
+        frame["binary"] = tail
+    _LOGGING.debug("JSON header with %d bytes of binary data", len(tail))
+    return frame
+
+
+def binary_send_image(request: Dict[str, Any], data: bytes) -> bytes:
+    """
+    One binary websocket message carrying an art request and the image, as the SmartThings
+    app does for older art API's (0.97, 1.07): uint16 big endian header length, JSON header, image
+    """
+    header = json.dumps(
+        {
+            "method": "ms.channel.emit",
+            "params": {"data": json.dumps(request), "to": "host", "event": "art_app_request"},
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    if len(header) > 0xFFFF:
+        raise ValueError("Upload header too large")
+    return len(header).to_bytes(2, "big") + header + bytes(data)
+
+
+def is_legacy_art_api(version: Optional[str]) -> bool:
+    """True for the art API on 2017/2018 Frames (eg '0.97', '1.07'), newer TV's report 2.x or 4.x"""
+    try:
+        return int(str(version).split(".")[0]) < 2
+    except ValueError:
+        return False
+
+
+def thumbnail_name(content_id: str, data: Union[bytes, bytearray]) -> str:
+    """file name for an inline thumbnail, from its magic number"""
+    return "{}.{}".format(content_id, "png" if bytes(data[:4]) == b"\x89PNG" else "jpg")
+
+
+def parse_matte_list(data: Dict[str, Any], include_colour: bool = False) -> Any:
+    """
+    get_matte_list reply as matte types (and colours).
+    Newer TV's send 'matte_type_list' and 'matte_color_list', 2018 Frames send 'matte_types'
+    as a list of combined ids like 'shadowbox_polar' (issue #35), which are split here.
+    """
+    if "matte_type_list" in data:
+        types = json.loads(data["matte_type_list"])
+        colours = json.loads(data.get("matte_color_list", "[]"))
+    else:
+        mattes = data.get("matte_types", [])
+        if isinstance(mattes, str):
+            mattes = json.loads(mattes)
+        types, colours = [], []
+        for matte in mattes:
+            matte_type, _, colour = matte.get("matte_id", "").partition("_")
+            if matte_type and {"matte_type": matte_type} not in types:
+                types.append({"matte_type": matte_type})
+            if colour and {"color": colour} not in colours:
+                colours.append({"color": colour})
+    return (types, colours) if include_colour else types
+
+
+def format_host(host: str) -> str:
+    """ipv6 addresses need [] in a URL"""
+    return "[{}]".format(host) if ":" in host and not host.startswith("[") else host
 
 
 def get_ssl_context() -> ssl.SSLContext:
