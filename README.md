@@ -329,6 +329,8 @@ python -m samsungframetv.diagnose 192.168.xxx.xxx --ipcontrol
 
 It only reads from the TV (no uploads, deletes or setting changes), prints a summary, and saves `diagnose_<model>.json`. MAC and ip addresses, device ids and tokens are removed from the report, but have a look before you post it. Leave out `--ipcontrol` if you have not enabled IP Remote. Use `-t` to give your usual token file, otherwise you may have to press Allow on the TV again.
 
+If uploads are a problem, add `--upload some_picture.jpg`. It uploads that picture, records how the TV answers, and deletes it again.
+
 Reports are saved in `tests/fixtures/devices/`, and the tests replay them, so a change that would break your model is caught before release.
 
 ## License

@@ -1,5 +1,6 @@
 """Tests for the diagnose report, and replay of reports recorded on real TV's (tests/fixtures/devices)."""
 
+import asyncio
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -257,3 +258,37 @@ def test_sync_thumbnail_list_on_art_api_4() -> None:
         assert tv.get_thumbnail(["MY_F0001"], as_dict=True) == {"MY_F0001.jpg": JPEG}
     assert get_list.call_count == 2
     send.assert_not_called()
+
+
+def test_redact_keeps_uuids_matchable() -> None:
+    request = "8a3c0f4e-1d2b-4c5a-9e6f-7a8b9c0d1e2f"
+    other = "11111111-2222-4333-8444-555555555555"
+    report = diagnose.redact({"raw": [{"request": {"request_id": request}}, {"response": {"request_id": request, "id": other}},
+                                      {"response": {"data": json.dumps({"request_id": request})}}]})
+    assert report["raw"][0]["request"]["request_id"] == report["raw"][1]["response"]["request_id"] == "<uuid-1>"
+    assert report["raw"][1]["response"]["id"] == "<uuid-2>"
+    assert json.loads(report["raw"][2]["response"]["data"]) == {"request_id": "<uuid-1>"}
+
+
+@pytest.mark.asyncio
+async def test_upload_test_records_image_added(tmp_path: Path) -> None:
+    image = tmp_path / "test.jpg"
+    image.write_bytes(JPEG)
+    tv = art_tv(REST_2018, {k: [v] for k, v in REPLIES_2018.items()})
+    tv.upload = AsyncMock(return_value="MY_F0099")  # type: ignore[method-assign]
+    tv.delete = AsyncMock()  # type: ignore[method-assign]
+    report = await diagnose.run_diagnostics(tv, timeout=1, upload_file=str(image))
+    assert report["steps"]["upload"]["result"] == "MY_F0099"
+    assert tv.upload.await_args.args[0] == JPEG
+    assert tv.upload.await_args.kwargs["file_type"] == "jpg"
+    tv.delete.assert_awaited_once_with("MY_F0099")
+
+
+@pytest.mark.asyncio
+async def test_recorder_keeps_events_waited_for() -> None:
+    tv = art_tv(REST_2018, {})
+    tv.pending_requests["image_added"] = asyncio.get_running_loop().create_future()
+    tv.pending_requests["image_added"].set_result({"data": json.dumps({"event": "image_added", "content_id": "MY_F0099"})})
+    recorder = diagnose._Recorder(tv)
+    assert (await tv.wait_for_response("image_added", timeout=1))["content_id"] == "MY_F0099"
+    assert recorder.raw == [{"wait_for": "image_added", "response": {"event": "image_added", "content_id": "MY_F0099"}, "seconds": 0.0}]

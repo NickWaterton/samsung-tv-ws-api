@@ -543,7 +543,7 @@ class SamsungTVArt(SamsungTVWSConnection):
 
             # Check if the string is a URL for a remote image file
             url_parts = urlparse(file)
-            if url_parts.scheme:
+            if url_parts.scheme in ("http", "https"):   # a windows path such as D:\art.jpg has scheme "d"
                 resp = requests.head(file)
                 file_size = int(resp.headers.get("Content-Length", 0))
                 chunker = _stream_chunker
