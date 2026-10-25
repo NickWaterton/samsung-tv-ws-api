@@ -390,16 +390,43 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         assert data
         return data
         
+    async def _artmode_settings_one_by_one(self, setting=''):
+        """the get_artmode_settings list, from the requests art API 2.03 has for each setting"""
+        items = []
+        for item in helper.ART_SETTINGS_REQUESTED_ONE_BY_ONE:
+            if setting and item != setting:
+                continue
+            try:
+                data = await self._send_art_request({"request": "get_{}".format(item)})
+            except exceptions.ResponseError as e:
+                _LOGGING.debug("get_%s: %s", item, e)
+                continue
+            if data:
+                items.append(dict({"item": item}, **{k: data[k] for k in ("value", "min", "max") if k in data}))
+        return items
+
     async def get_artmode_settings(self, setting=''):
         '''
         setting can be any of 'brightness', 'color_temperature', 'motion_sensitivity',
         'motion_timer', or 'brightness_sensor_setting'
+        art API 4.3.4.0 (2022) added get_artmode_settings, earlier versions (2.03) return error -9, so the
+        list is built from get_brightness and get_color_temperature, which they answer
         '''
-        data = await self._send_art_request(
-            {"request": "get_artmode_settings"}
-        )
-        assert data
-        data = json.loads(data['data'])
+        await self._legacy_api()   # reads the art api version
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            try:
+                data = await self._send_art_request(
+                    {"request": "get_artmode_settings"}
+                )
+                assert data
+                data = json.loads(data['data'])
+            except exceptions.ResponseError:
+                data = await self._artmode_settings_one_by_one(setting)
+                if not data:
+                    raise
+        else:
+            data = await self._artmode_settings_one_by_one(setting)
+            assert data
         return next(iter(item for item in data if item['item'] == setting), data)
 
     async def _slideshow_request(self, action, fields=None):
@@ -452,12 +479,13 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
 
     async def get_brightness(self):
         # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
-        try:
-            data = await self.get_artmode_settings('brightness')
-        except exceptions.ResponseError:
-            data = await self._send_art_request(
-                {"request": "get_brightness"}
-            )
+        await self._legacy_api()   # reads the art api version
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                return await self.get_artmode_settings('brightness')
+        data = await self._send_art_request(
+            {"request": "get_brightness"}
+        )
         assert data
         return data
 
@@ -471,12 +499,13 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         
     async def get_color_temperature(self):
         # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
-        try:
-            data = await self.get_artmode_settings('color_temperature')
-        except exceptions.ResponseError:
-            data = await self._send_art_request(
-                {"request": "get_color_temperature"}
-            )
+        await self._legacy_api()   # reads the art api version
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                return await self.get_artmode_settings('color_temperature')
+        data = await self._send_art_request(
+            {"request": "get_color_temperature"}
+        )
         assert data
         return data
 

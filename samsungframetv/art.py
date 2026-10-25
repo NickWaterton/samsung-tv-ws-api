@@ -8,6 +8,7 @@ Copyright (C) 2024,2025 Nick Waterton <n.waterton@outlook.com>
 SPDX-License-Identifier: LGPL-3.0
 """
 
+import contextlib
 from datetime import datetime
 import json
 import logging
@@ -255,14 +256,42 @@ class SamsungTVArt(SamsungTVWSConnection):
         assert data
         return data
 
+    def _artmode_settings_one_by_one(self, setting=''):
+        """the get_artmode_settings list, from the requests art API 2.03 has for each setting"""
+        items = []
+        for item in helper.ART_SETTINGS_REQUESTED_ONE_BY_ONE:
+            if setting and item != setting:
+                continue
+            try:
+                data = self._send_art_request({"request": "get_{}".format(item)})
+            except exceptions.ResponseError as e:
+                _LOGGING.debug("get_%s: %s", item, e)
+                continue
+            if data:
+                items.append(dict({"item": item}, **{k: data[k] for k in ("value", "min", "max") if k in data}))
+        return items
+
     def get_artmode_settings(self, setting=''):
         '''
         setting can be any of 'brightness', 'color_temperature', 'motion_sensitivity',
         'motion_timer', or 'brightness_sensor_setting'
+        art API 4.3.4.0 (2022) added get_artmode_settings, earlier versions (2.03) return error -9, so the
+        list is built from get_brightness and get_color_temperature, which they answer
         '''
-        data = self._send_art_request(
-            {"request": "get_artmode_settings"}
-        )
+        self._legacy_api()   # reads the art api version
+        if not helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            items = self._artmode_settings_one_by_one(setting)
+            assert items
+            return next(iter(item for item in items if item['item'] == setting), items)
+        try:
+            data = self._send_art_request(
+                {"request": "get_artmode_settings"}
+            )
+        except exceptions.ResponseError:
+            items = self._artmode_settings_one_by_one(setting)
+            if not items:
+                raise
+            return next(iter(item for item in items if item['item'] == setting), items)
         assert data
         if 'data' in data.keys():
             data = json.loads(data["data"])
@@ -318,9 +347,13 @@ class SamsungTVArt(SamsungTVWSConnection):
         return self._slideshow_request("set", self._slideshow_fields(duration, type, category))
 
     def get_brightness(self):
-        try:
-            data = self.get_artmode_settings('brightness')
-        except exceptions.ResponseError:
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        self._legacy_api()   # reads the art api version
+        data = None
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                data = self.get_artmode_settings('brightness')
+        if not data:
             data = self._send_art_request(
                 {"request": "get_brightness"}
             )
@@ -336,9 +369,13 @@ class SamsungTVArt(SamsungTVWSConnection):
         return data
 
     def get_color_temperature(self):
-        try:
-            data = self.get_artmode_settings('color_temperature')
-        except exceptions.ResponseError:
+        # art API 4.3.4.0 (2022) only answers get_artmode_settings, earlier versions return error -9 for it
+        self._legacy_api()   # reads the art api version
+        data = None
+        if helper.has_artmode_settings(getattr(self, "_api_version", None)):
+            with contextlib.suppress(exceptions.ResponseError):
+                data = self.get_artmode_settings('color_temperature')
+        if not data:
             data = self._send_art_request(
                 {"request": "get_color_temperature"}
             )

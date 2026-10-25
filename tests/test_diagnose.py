@@ -214,13 +214,22 @@ async def test_brightness_asks_artmode_settings_first(path: Path) -> None:
     """get_artmode_settings arrived in art API 4.3.4.0, which no longer answers get_brightness"""
     recorded = json.loads(path.read_text())
     tv = art_tv(recorded["rest"], replies_from_report(recorded))
+    tv._api_version = recorded["art_api_version"]
     recorder = diagnose._Recorder(tv)
-    assert (await tv.get_brightness())["value"] is not None
+    assert (await tv.get_brightness())["value"] == "0"
     requests = [entry["request"]["request"] for entry in recorder.raw]
-    if recorded["art_api_version"].startswith("2."):
-        assert requests == ["get_artmode_settings", "get_brightness"]
-    else:
-        assert requests == ["get_artmode_settings"]
+    assert requests == ["get_brightness" if recorded["art_api_version"].startswith("2.") else "get_artmode_settings"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", DEVICES, ids=[p.stem for p in DEVICES])
+async def test_artmode_settings_on_both_versions(path: Path) -> None:
+    """art API 2.03 has no get_artmode_settings, the list is built from the requests it has for each setting"""
+    recorded = json.loads(path.read_text())
+    tv = art_tv(recorded["rest"], replies_from_report(recorded))
+    tv._api_version = recorded["art_api_version"]
+    assert await tv.get_artmode_settings("brightness") == {"item": "brightness", "value": "0", "min": "0", "max": "10"}
+    assert {"item": "brightness", "value": "0", "min": "0", "max": "10"} in await tv.get_artmode_settings()
 
 
 @pytest.mark.asyncio

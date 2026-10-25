@@ -18,6 +18,7 @@
 
 # version 4.1.1 (in development) get/set_slideshow_status and get/set_auto_rotation_status work on both art API names,
 #               async get_brightness() and get_color_temperature() ask get_artmode_settings first (as sync does),
-#               get_thumbnail() uses get_thumbnail_list straight away on art API 4+
+#               get_thumbnail() uses get_thumbnail_list straight away on art API 4+,
+#               get_artmode_settings() built from the single setting requests on art API 2.03
 
-__version__ = '4.1.1.dev3'
+__version__ = '4.1.1.dev4'
