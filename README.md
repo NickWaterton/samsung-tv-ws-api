@@ -43,7 +43,7 @@ cd samsung-tv-ws-api
 pip install --editable .
 ```
 
-### Upgrading from samsungframetv
+### Upgrading from samsungtvws
 
 The package was renamed from `samsungtvws` to `samsungframetv` in version 4.0.0. The API is unchanged, so new code only needs the new import:
 
@@ -280,6 +280,33 @@ Supported TV models may vary by region.
 ```
 
 For complete list https://developer.samsung.com/smarttv/develop/specifications/tv-model-groups.html
+
+### Art mode by model
+
+Samsung changes the art API between model years and firmware, and I only own a 2021 and a 2022 Frame. This is what is known:
+
+| Model | Status |
+|---|---|
+| 2017 Frame (LS003) | Art API 1.07. Upload and thumbnails use the older single binary message, chosen automatically. Based on owner reports, not tested here. |
+| 2018 Frame (LS03N) | As 2017. The matte list comes in an older format, which is handled (issue #35). Not tested here. |
+| 2019 and 2020 Frames | No reports yet. |
+| 2021 Frame (LS03A) | Tested here. |
+| 2022 Frame (LS03B) | Tested here. The art service can stop answering, see "Timeouts and recovery". |
+| 2023 and 2024 Frames (LS03C, LS03D) | Reported working by users. 2024 models pair on the remote channel first. |
+| 2025 Frame (LS03F) | Reports REST `PowerState: standby` in art mode, which `in_artmode()` and `get_power_state()` allow for (issue #33). Long press of `KEY_POWER` does not power off (issue #29), use IP Control `power_off()`. Not tested here. |
+| Other TVs with art mode (eg S95H) | Report `FrameTVSupport: false`, so `supported()` asks the art channel instead (issue #34). Not tested here. |
+
+### Help with a model I don't own
+
+If your TV is not listed as tested, or something doesn't work, please run the diagnose tool with the TV on and send the report in an issue:
+
+```bash
+python -m samsungframetv.diagnose 192.168.xxx.xxx --ipcontrol
+```
+
+It only reads from the TV (no uploads, deletes or setting changes), prints a summary, and saves `diagnose_<model>.json`. MAC and ip addresses, device ids and tokens are removed from the report, but have a look before you post it. Leave out `--ipcontrol` if you have not enabled IP Remote. Use `-t` to give your usual token file, otherwise you may have to press Allow on the TV again.
+
+Reports are saved in `tests/fixtures/devices/`, and the tests replay them, so a change that would break your model is caught before release.
 
 ## License
 
