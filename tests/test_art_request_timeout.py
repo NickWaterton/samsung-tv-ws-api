@@ -34,3 +34,20 @@ def test_sync_no_answer() -> None:
 
 def test_service_unavailable_is_a_request_timeout() -> None:
     assert issubclass(exceptions.ArtServiceUnavailableError, exceptions.ArtRequestTimeoutError)
+
+
+@pytest.mark.asyncio
+async def test_async_names_the_request_on_a_new_connection() -> None:
+    """start_listening sends get_artmode on a new connection, the error must still name our request"""
+    with patch.object(SamsungTVAsyncArt, "get_token"):
+        tv = SamsungTVAsyncArt("127.0.0.1")
+
+    async def start_listening() -> bool:
+        tv._last_art_request = "get_artmode_status"
+        return True
+
+    tv.start_listening = start_listening  # type: ignore[method-assign]
+    tv.send_command = AsyncMock()
+    tv.wait_for_response = AsyncMock(return_value=None)
+    with pytest.raises(exceptions.ArtRequestTimeoutError, match="get_current_artwork"):
+        await tv.get_current()

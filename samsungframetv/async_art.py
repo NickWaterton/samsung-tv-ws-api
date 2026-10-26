@@ -197,9 +197,10 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         if not request_data.get("id"):
             request_data["id"] = self.get_uuid()            #old api
         request_data["request_id"] = request_data["id"]     #new api
-        self._last_art_request = request_data.get("request")
         self.pending_requests[wait_for_event or request_data["id"]] = asyncio.Future()
         await self.start_listening()
+        # after start_listening, which sends its own get_artmode on a new connection
+        self._last_art_request = request_data.get("request")
         # no key press delay, the reply is what we wait for
         await self.send_command(ArtChannelEmitCommand.art_app_request(request_data), key_press_delay=0)
         data = await self.wait_for_response(wait_for_event or request_data["id"], timeout)
