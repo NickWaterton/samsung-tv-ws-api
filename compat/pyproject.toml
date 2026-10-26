@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "samsungframetv-compat"
-version = "4.1.3"
+version = "4.1.4"
 description = "Lets code written for 'import samsungtvws' use samsungframetv (NickWaterton fork)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "LGPL-3.0-only"
 authors = [{ name = "Nick Waterton", email = "n.waterton@outlook.com" }]
-dependencies = ["samsungframetv>=4.1.3"]
+dependencies = ["samsungframetv>=4.1.4"]
 
 [project.urls]
 Homepage = "https://github.com/NickWaterton/samsung-tv-ws-api"
