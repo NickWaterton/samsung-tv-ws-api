@@ -161,6 +161,9 @@ async def _step(results: Dict[str, Any], name: str, call: Callable[[], Awaitable
         return value
     except Exception as e:
         results[name] = {"ok": False, "error": repr(e)}
+        if isinstance(e, exceptions.ResponseError) and "error number -9" in str(e):
+            # the TV does not know this request, eg get_device_info on art API 0.97
+            results[name]["unsupported"] = True
         _LOGGING.debug("%s failed: %r", name, e)
         return None
     finally:
@@ -245,6 +248,8 @@ def _print_summary(report: Dict[str, Any]) -> None:
         if step["ok"]:
             result = json.dumps(step["result"])
             print("  ok    {:26} {}".format(name, result if len(result) < 70 else result[:67] + "..."))
+        elif step.get("unsupported"):
+            print("  n/a   {:26} not supported by this TV (error -9)".format(name))
         else:
             print("  FAIL  {:26} {}".format(name, step["error"]))
 

@@ -52,7 +52,7 @@ class SamsungTVRest(connection.SamsungTVWSBaseConnection):
             
     def rest_power_state(self) -> bool:
         _LOGGING.debug("Get PowerState via rest api")
-        return self._rest_request("").get('device', {}).get('PowerState', 'off') == 'on'
+        return helper.rest_power_state(self._rest_request("")) == 'on'
         
     def get_model_year(self) -> int:
         model = self._rest_request("").get('device', {}).get('model', '0_0')
