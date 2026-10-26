@@ -370,14 +370,14 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         
     async def on(self) -> bool:
         data = await self._get_device_info()
-        return data.get("device", {}).get('PowerState', 'off') == 'on'
+        return helper.rest_power_state(data) == 'on'
         
     async def is_artmode(self) -> bool:
         return await self.on() and bool(self.art_mode)
         
     async def in_artmode(self) -> bool:
         data = await self._get_device_info()
-        power = data.get("device", {}).get("PowerState", "off")
+        power = helper.rest_power_state(data)
         # 2025+ Frames report PowerState 'standby' while in art mode (issue #33)
         if power == "on" or (power == "standby" and ipcontrol.model_year(data) >= 25):
             return await self.get_artmode() == 'on'

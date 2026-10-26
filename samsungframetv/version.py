@@ -29,4 +29,7 @@
 #               sends no thumbnail (some Art Store items), art requests with no answer raise ArtRequestTimeoutError
 #               (still an AssertionError) instead of a bare assert
 
-__version__ = '4.1.3'
+# version 4.1.4 (in development) 2018 Frame (issue #35): get_matte_list() reads the art API 0.97 'matte_list' reply,
+#               in_artmode() and on() take a missing REST PowerState as on, diagnose shows error -9 as not supported
+
+__version__ = '4.1.4.dev1'

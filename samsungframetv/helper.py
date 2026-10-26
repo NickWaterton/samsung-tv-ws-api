@@ -141,14 +141,15 @@ def log_missing_thumbnails(host: str, requested: Any, received: Dict[str, Any]) 
 def parse_matte_list(data: Dict[str, Any], include_colour: bool = False) -> Any:
     """
     get_matte_list reply as matte types (and colours).
-    Newer TV's send 'matte_type_list' and 'matte_color_list', 2018 Frames send 'matte_types'
-    as a list of combined ids like 'shadowbox_polar' (issue #35), which are split here.
+    Newer TV's send 'matte_type_list' and 'matte_color_list', 2018 Frames send 'matte_types' or
+    'matte_list' (art API 0.97) as a list of combined ids like 'shadowbox_polar' (issue #35),
+    which are split here.
     """
     if "matte_type_list" in data:
         types = json.loads(data["matte_type_list"])
         colours = json.loads(data.get("matte_color_list", "[]"))
     else:
-        mattes = data.get("matte_types", [])
+        mattes = data.get("matte_types", data.get("matte_list", []))
         if isinstance(mattes, str):
             mattes = json.loads(mattes)
         types, colours = [], []
@@ -159,6 +160,15 @@ def parse_matte_list(data: Dict[str, Any], include_colour: bool = False) -> Any:
             if colour and {"color": colour} not in colours:
                 colours.append({"color": colour})
     return (types, colours) if include_colour else types
+
+
+def rest_power_state(data: Optional[Dict[str, Any]]) -> Optional[str]:
+    """REST PowerState, None when the REST api did not answer.
+    TV's before 2019 (eg the 2018 Frame, issue #35) don't report PowerState, but only answer when on."""
+    device = (data or {}).get("device")
+    if not device:
+        return None
+    return device.get("PowerState", "on")
 
 
 def format_host(host: str) -> str:
