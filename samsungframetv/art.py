@@ -418,6 +418,15 @@ class SamsungTVArt(SamsungTVWSConnection):
         assert data
         return data
 
+    @staticmethod
+    def _read_thumbnail_header(art_socket, content_id):
+        header_len = art_socket.recv(4)
+        if not header_len:
+            # the TV closed the socket without sending anything, seen for some Art Store items
+            art_socket.close()
+            raise exceptions.ThumbnailUnavailableError(content_id)
+        return json.loads(art_socket.recv(int.from_bytes(header_len, "big")))
+
     def get_thumbnail_list(self, content_id_list=[]):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
@@ -440,8 +449,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         current_thumb = -1
         thumbnail_data_dict = {}
         while current_thumb+1 < total_num_thumbnails:
-            header_len = int.from_bytes(art_socket.recv(4), "big")
-            header = json.loads(art_socket.recv(header_len))
+            header = self._read_thumbnail_header(art_socket, content_id_list)
             thumbnail_data_len = int(header["fileLength"])
             current_thumb = int(header["num"])
             total_num_thumbnails = int(header["total"])
@@ -483,8 +491,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             conn_info = json.loads(data["conn_info"])
 
             art_socket = self._open_d2d_socket(conn_info, secured=False)
-            header_len = int.from_bytes(art_socket.recv(4), "big")
-            header = json.loads(art_socket.recv(header_len))
+            header = self._read_thumbnail_header(art_socket, content_id)
 
             thumbnail_data_len = int(header["fileLength"])
             thumbnail_data = bytearray()

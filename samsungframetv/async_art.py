@@ -595,6 +595,18 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         assert data
         return data
  
+    @staticmethod
+    async def _read_thumbnail_header(reader, writer, content_id):
+        try:
+            header_len = int.from_bytes(await reader.readexactly(4), "big")
+        except asyncio.IncompleteReadError as e:
+            writer.close()
+            if e.partial:
+                raise
+            # the TV closed the socket without sending anything, seen for some Art Store items
+            raise exceptions.ThumbnailUnavailableError(content_id) from e
+        return json.loads(await reader.readexactly(header_len))
+
     async def get_thumbnail_list(self, content_id_list=[]):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
@@ -617,8 +629,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         current_thumb = -1
         thumbnail_data_dict: Dict[str, bytes] = {}
         while current_thumb+1 < total_num_thumbnails:
-            header_len = int.from_bytes(await reader.readexactly(4), "big")
-            header = json.loads(await reader.readexactly(header_len))
+            header = await self._read_thumbnail_header(reader, writer, content_id_list)
             thumbnail_data_len = int(header["fileLength"])
             current_thumb = int(header["num"])
             total_num_thumbnails = int(header["total"])
@@ -663,8 +674,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 continue
             conn_info = json.loads(data["conn_info"])
             reader, writer = await self._open_d2d_connection(conn_info, secured=False)
-            header_len = int.from_bytes(await reader.readexactly(4), "big")
-            header = json.loads(await reader.readexactly(header_len))
+            header = await self._read_thumbnail_header(reader, writer, content_id)
             thumbnail_data_len = int(header["fileLength"])
             thumbnail_data = await reader.readexactly(thumbnail_data_len)
             writer.close()
