@@ -113,11 +113,13 @@ class SamsungTVArt(SamsungTVWSConnection):
             raise exceptions.TimeoutError('Websocket Time out: {}'.format(e)) from e
         return {}
 
-    def wait_for_response(self, wait_for_event, request_uuid=None):
+    def wait_for_response(self, wait_for_event, request_uuid=None, or_no_id=False):
+        """or_no_id also accepts a message without an id, eg image_added from art API 4.3.4.0"""
         while True:
             data = self.get_websocket_message()
-            _LOGGING.debug('request_uuid: {}, message uuid: {}'.format(request_uuid, data.get('request_id', data.get('id'))))
-            if data.get('request_id', data.get('id')) == request_uuid:
+            message_uuid = data.get('request_id', data.get('id'))
+            _LOGGING.debug('request_uuid: {}, message uuid: {}'.format(request_uuid, message_uuid))
+            if message_uuid == request_uuid or (or_no_id and message_uuid is None):
                 sub_event = data.get("event", "*")
                 _LOGGING.debug('sub_event: {}, wait_for_event: {}'.format(sub_event, wait_for_event))
                 if sub_event == "error":
@@ -543,7 +545,7 @@ class SamsungTVArt(SamsungTVWSConnection):
 
             # Check if the string is a URL for a remote image file
             url_parts = urlparse(file)
-            if url_parts.scheme:
+            if url_parts.scheme in ("http", "https"):   # a windows path such as D:\art.jpg has scheme "d"
                 resp = requests.head(file)
                 file_size = int(resp.headers.get("Content-Length", 0))
                 chunker = _stream_chunker
@@ -566,11 +568,12 @@ class SamsungTVArt(SamsungTVWSConnection):
         if self._legacy_api():
             return self._upload_binary(b"".join(chunker(file)), matte, file_type)
 
+        upload_id = self.get_uuid()
         data = self._send_art_request(
             {
                 "request": "send_image",
                 "file_type": file_type,
-                "request_id" : self.get_uuid(),
+                "request_id" : upload_id,
                 "id": self.art_uuid,
                 "conn_info": {
                     "d2d_mode": "socket",
@@ -605,7 +608,8 @@ class SamsungTVArt(SamsungTVWSConnection):
         # Send the image contents in chunks
         for chunk in chunker(file):
             art_socket.send(chunk)
-        data = self.wait_for_response("image_added")
+        # art API 2.03 (2021) sends the upload's id with image_added, 4.3.4.0 (2022) sends none
+        data = self.wait_for_response("image_added", upload_id, or_no_id=True)
         return data["content_id"] if data else None
 
     def _upload_binary(self, data, matte, file_type):

@@ -271,6 +271,7 @@ Frame TV art examples are available in `async_art.py`, `async_art_slideshow_anyt
 - If the TV drops the connection (common soon after standby), the next command reconnects once, resumes listening with the same callback, and resends.
 - An exception in your callback is logged, and the listener keeps running.
 - Art requests wait up to 5 seconds for the TV to answer (`async_art.ART_RESPONSE_TIMEOUT`), and are sent without the remote's key press delay. A TV with another client on the art channel, such as openHAB or Home Assistant, can take more than 2 seconds to answer content requests.
+- `upload()` waits up to 30 seconds (`timeout`) for the TV to confirm the upload, and returns `None` if it doesn't. The TV may still add the image later. Its confirmation is then matched to that upload, not taken as the answer to the next one, so the next upload gets the right `content_id` (issues #10 and #27). Check `available()` before uploading the same file again.
 - The art service can stop answering while the TV is otherwise fine (seen on 2022 Frames). After 3 art requests in a row get no answer, `SamsungTVAsyncArt` closes the connection, and for the next 30 seconds art requests raise `ArtServiceUnavailableError` straight away instead of waiting. If the TV still doesn't answer after that, the pause doubles each time, up to 4 minutes. `ArtServiceUnavailableError` is a subclass of `AssertionError`, so existing `except AssertionError` handlers still catch it.
 
 ```python
@@ -311,7 +312,7 @@ Samsung changes the art API between model years and firmware, and I only own a 2
 | 2017 Frame (LS003) | Art API 1.07. Upload and thumbnails use the older single binary message, chosen automatically. Based on owner reports, not tested here. |
 | 2018 Frame (LS03N) | As 2017. The matte list comes in an older format, which is handled (issue #35). Not tested here. |
 | 2019 and 2020 Frames | No reports yet. |
-| 2021 Frame (LS03A) | Art API 2.03. Tested here. Has no `get_artmode_settings` request (it arrived in art API 4.3.4.0) but has one request per setting, which `get_artmode_settings()` uses instead. |
+| 2021 Frame (LS03A) | Art API 2.03. Tested here. Has no `get_artmode_settings` request (it arrived in art API 4.3.4.0) but has one request per setting, which `get_artmode_settings()` uses instead. `get_thumbnail()` works for your own photos (`MY_...`), but for Art Store items (`SAM-...`) the TV closes the transfer socket without sending anything, so it raises `IncompleteReadError`. |
 | 2022 Frame (LS03B) | Art API 4.3.4.0. Tested here. `get_thumbnail` was replaced by `get_thumbnail_list` in this version, which `get_thumbnail()` uses automatically. The art service can stop answering, see "Timeouts and recovery". |
 | 2023 and 2024 Frames (LS03C, LS03D) | Reported working by users. 2024 models pair on the remote channel first. |
 | 2025 Frame (LS03F) | Reports REST `PowerState: standby` in art mode, which `in_artmode()` and `get_power_state()` allow for (issue #33). Long press of `KEY_POWER` does not power off (issue #29), use IP Control `power_off()`. Not tested here. |
@@ -328,6 +329,8 @@ python -m samsungframetv.diagnose 192.168.xxx.xxx --ipcontrol
 ```
 
 It only reads from the TV (no uploads, deletes or setting changes), prints a summary, and saves `diagnose_<model>.json`. MAC and ip addresses, device ids and tokens are removed from the report, but have a look before you post it. Leave out `--ipcontrol` if you have not enabled IP Remote. Use `-t` to give your usual token file, otherwise you may have to press Allow on the TV again.
+
+If uploads are a problem, add `--upload some_picture.jpg`. It uploads that picture, records how the TV answers, and deletes it again.
 
 Reports are saved in `tests/fixtures/devices/`, and the tests replay them, so a change that would break your model is caught before release.
 

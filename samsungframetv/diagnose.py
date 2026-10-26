@@ -1,9 +1,10 @@
 """
 Record what a TV reports, so owners of models we can't test can send it in an issue.
 
-usage: python -m samsungframetv.diagnose 192.168.1.20 [--ipcontrol] [-o report.json]
+usage: python -m samsungframetv.diagnose 192.168.1.20 [--ipcontrol] [--upload IMAGE] [-o report.json]
 
-Only reads from the TV: it does not upload, delete or change any setting. The report has the
+Only reads from the TV: it does not upload, delete or change any setting, unless --upload is given,
+which uploads one image and deletes it again. The report has the
 REST device info, the art API version and the raw reply to each art request. MAC addresses,
 ip addresses, device ids and tokens are removed before it is saved.
 """
@@ -15,6 +16,7 @@ import json
 import logging
 import re
 import time
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from . import exceptions, ipcontrol
@@ -34,20 +36,29 @@ _PRIVATE_KEYS = {"duid", "id", "udn", "wifiMac", "ip", "token", "deviceName", "n
                  "target_client_id"}
 
 
-def redact(value: Any) -> Any:
-    """copy of value with ids, MAC and ip addresses and tokens replaced"""
+def redact(value: Any, uuids: Optional[Dict[str, str]] = None) -> Any:
+    """
+    copy of value with ids, MAC and ip addresses and tokens replaced. Each uuid becomes <uuid-N>, the
+    same N each time it appears in one report, so replies can still be matched to their requests
+    """
+    uuids = {} if uuids is None else uuids
+
+    def uuid_name(match: "re.Match[str]") -> str:
+        return uuids.setdefault(match.group(0).lower(), "<uuid-{}>".format(len(uuids) + 1))
+
     if isinstance(value, dict):
-        return {k: ("<redacted>" if k in _PRIVATE_KEYS and v not in (None, "") else redact(v)) for k, v in value.items()}
+        return {k: (_UUID.sub(uuid_name, v) if isinstance(v, str) and _UUID.fullmatch(v) else "<redacted>")
+                if k in _PRIVATE_KEYS and v not in (None, "") else redact(v, uuids) for k, v in value.items()}
     if isinstance(value, list):
-        return [redact(v) for v in value]
+        return [redact(v, uuids) for v in value]
     if isinstance(value, str):
         # some replies hold json in a string
         if value[:1] in "{[":
             try:
-                return json.dumps(redact(json.loads(value)))
+                return json.dumps(redact(json.loads(value), uuids))
             except ValueError:
                 pass
-        value = _UUID.sub("<uuid>", value)
+        value = _UUID.sub(uuid_name, value)
         value = _MAC.sub("<mac>", value)
         return _IPV4.sub("<ip>", value)
     return value
@@ -102,8 +113,44 @@ class _Recorder:
                 self.rest = info
             return info
 
+        wait_for_response = tv.wait_for_response
+
+        async def recorded_wait(request_uuid: str, *args: Any, **kwargs: Any) -> Any:
+            # events that answer a request sent earlier, eg image_added after an upload
+            entry: Dict[str, Any] = {"wait_for": request_uuid}
+            started = time.monotonic()
+            try:
+                response = await wait_for_response(request_uuid, *args, **kwargs)
+                entry["response"] = _summarise_binary(response)
+                return response
+            except Exception as e:
+                entry["error"] = repr(e)
+                raise
+            finally:
+                entry["seconds"] = round(time.monotonic() - started, 2)
+                self.raw.append(entry)
+
         tv._send_art_request = recorded_send  # type: ignore[method-assign]
         tv._get_device_info = recorded_device_info  # type: ignore[method-assign]
+        tv.wait_for_response = recorded_wait  # type: ignore[method-assign]
+
+
+def thumbnail_content_id(current: Any, content: Any) -> Optional[str]:
+    """Pick an item for the thumbnail test.
+
+    The 2021 Frame (art API 2.03) closes the transfer socket without sending
+    anything for Art Store items (SAM-...), so a user photo (MY_...) is
+    tried first: the current one, else the first one in the content list.
+    """
+    current_id = current.get("content_id") if isinstance(current, dict) else None
+    if current_id and str(current_id).startswith("MY_"):
+        return str(current_id)
+    if isinstance(content, list):
+        for item in content:
+            item_id = item.get("content_id") if isinstance(item, dict) else None
+            if item_id and str(item_id).startswith("MY_"):
+                return str(item_id)
+    return str(current_id) if current_id else None
 
 
 async def _step(results: Dict[str, Any], name: str, call: Callable[[], Awaitable[Any]], timeout: float) -> Any:
@@ -124,8 +171,12 @@ async def run_diagnostics(
     tv: SamsungTVAsyncArt,
     ip_control: Optional[ipcontrol.SamsungTVAsyncIPControl] = None,
     timeout: float = 15,
+    upload_file: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """run the read only checks against tv, returns the redacted report"""
+    """
+    run the read only checks against tv, returns the redacted report. With upload_file, also upload
+    that image and delete it again, to record how the TV answers an upload
+    """
     recorder = _Recorder(tv)
     steps: Dict[str, Any] = {}
 
@@ -154,13 +205,19 @@ async def run_diagnostics(
     await step("get_auto_rotation_status", tv.get_auto_rotation_status)
     await step("get_artmode_settings", tv.get_artmode_settings)
     await step("get_brightness", tv.get_brightness)
-    content_id = current.get("content_id") if isinstance(current, dict) else None
+    content_id = thumbnail_content_id(current, content)
     if content_id:
         thumbnail = await step("get_thumbnail", lambda: tv.get_thumbnail(content_id))
         if isinstance(thumbnail, (bytes, bytearray)):
             steps["get_thumbnail"]["result"] = {"bytes": len(thumbnail), "jpeg": thumbnail[:2] == b"\xff\xd8", "png": thumbnail[:4] == b"\x89PNG"}
     if ip_control is not None:
         await step("ipcontrol_tv_states", lambda: ip_control.async_call("get_tv_states"))
+    if upload_file:
+        file_type = "png" if upload_file.lower().endswith(".png") else "jpg"
+        image = Path(upload_file).read_bytes()
+        uploaded = await step("upload", lambda: tv.upload(image, matte="none", portrait_matte="none", file_type=file_type))
+        if uploaded:
+            await step("delete_uploaded", lambda: tv.delete(uploaded))
 
     rest = recorder.rest or {}
     device = rest.get("device", {})
@@ -201,7 +258,7 @@ async def _main(args: argparse.Namespace) -> None:
             await ip_control.async_pair()
     tv = SamsungTVAsyncArt(args.ip, port=8002, token_file=args.token_file, timeout=args.timeout)
     try:
-        report = await run_diagnostics(tv, ip_control, timeout=args.timeout)
+        report = await run_diagnostics(tv, ip_control, timeout=args.timeout, upload_file=args.upload)
     finally:
         try:
             await tv.close()
@@ -221,6 +278,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser.add_argument("-t", "--token_file", default=None, help="websocket token file (default token_<ip>.txt)")
     parser.add_argument("-o", "--output", default=None, help="report file (default diagnose_<model>.json)")
     parser.add_argument("--ipcontrol", action="store_true", help="also ask IP Control (port 1516)")
+    parser.add_argument("--upload", metavar="IMAGE", default=None,
+                        help="also upload this jpg or png and delete it again (changes the TV's art for a moment)")
     parser.add_argument("--timeout", type=float, default=15, help="seconds to wait for each check (default 15)")
     parser.add_argument("-D", "--debug", action="store_true", help="debug logging")
     args = parser.parse_args(argv)
