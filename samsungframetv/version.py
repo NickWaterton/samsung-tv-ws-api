@@ -26,6 +26,7 @@
 #               diagnose tests the thumbnail of a user photo (the 2021 Frame sends none for Art Store items)
 
 # version 4.1.3 (in development) get_thumbnail() and get_thumbnail_list() raise ThumbnailUnavailableError when the TV
-#               sends no thumbnail (some Art Store items)
+#               sends no thumbnail (some Art Store items), art requests with no answer raise ArtRequestTimeoutError
+#               (still an AssertionError) instead of a bare assert
 
-__version__ = '4.1.3.dev1'
+__version__ = '4.1.3.dev2'

@@ -71,7 +71,16 @@ class TimeoutError(Exception):
     pass
 
 
-class ArtServiceUnavailableError(TimeoutError, AssertionError):
+class ArtRequestTimeoutError(TimeoutError, AssertionError):
+    """The TV did not answer an art request in time.
+
+    Also an AssertionError, because art calls that got no answer have always raised one.
+    """
+
+    pass
+
+
+class ArtServiceUnavailableError(ArtRequestTimeoutError):
     """The art service stopped answering, requests fail fast until it recovers.
 
     Also an AssertionError, because art calls that got no answer have always raised one.
