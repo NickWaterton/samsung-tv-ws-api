@@ -21,7 +21,8 @@
 #               get_thumbnail() uses get_thumbnail_list straight away on art API 4+,
 #               get_artmode_settings() built from the single setting requests on art API 2.03
 
-# version 4.1.2 (in development) diagnose --upload, upload() accepts windows paths, matches image_added to its upload
-#               so a late reply is not taken for the next upload (issues #10, #27), async upload() waits 30s
+# version 4.1.2 N Waterton October 2026 - diagnose --upload, upload() accepts windows paths, matches image_added to its upload
+#               so a late reply is not taken for the next upload (issues #10, #27), async upload() waits 30s,
+#               diagnose tests the thumbnail of a user photo (the 2021 Frame sends none for Art Store items)
 
-__version__ = '4.1.2.dev2'
+__version__ = '4.1.2'

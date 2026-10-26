@@ -292,3 +292,12 @@ async def test_recorder_keeps_events_waited_for() -> None:
     recorder = diagnose._Recorder(tv)
     assert (await tv.wait_for_response("image_added", timeout=1))["content_id"] == "MY_F0099"
     assert recorder.raw == [{"wait_for": "image_added", "response": {"event": "image_added", "content_id": "MY_F0099"}, "seconds": 0.0}]
+
+
+def test_thumbnail_content_id_prefers_user_photo() -> None:
+    content = [{"content_id": "SAM-S10000497"}, {"content_id": "MY_F0020"}]
+    assert diagnose.thumbnail_content_id({"content_id": "MY_F0128"}, content) == "MY_F0128"
+    assert diagnose.thumbnail_content_id({"content_id": "SAM-S10000497"}, content) == "MY_F0020"
+    assert diagnose.thumbnail_content_id({"content_id": "SAM-S10000497"}, [{"content_id": "SAM-S1"}]) == "SAM-S10000497"
+    assert diagnose.thumbnail_content_id(None, content) == "MY_F0020"
+    assert diagnose.thumbnail_content_id(None, None) is None

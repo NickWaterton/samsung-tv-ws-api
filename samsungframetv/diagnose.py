@@ -135,6 +135,24 @@ class _Recorder:
         tv.wait_for_response = recorded_wait  # type: ignore[method-assign]
 
 
+def thumbnail_content_id(current: Any, content: Any) -> Optional[str]:
+    """Pick an item for the thumbnail test.
+
+    The 2021 Frame (art API 2.03) closes the transfer socket without sending
+    anything for Art Store items (SAM-...), so a user photo (MY_...) is
+    tried first: the current one, else the first one in the content list.
+    """
+    current_id = current.get("content_id") if isinstance(current, dict) else None
+    if current_id and str(current_id).startswith("MY_"):
+        return str(current_id)
+    if isinstance(content, list):
+        for item in content:
+            item_id = item.get("content_id") if isinstance(item, dict) else None
+            if item_id and str(item_id).startswith("MY_"):
+                return str(item_id)
+    return str(current_id) if current_id else None
+
+
 async def _step(results: Dict[str, Any], name: str, call: Callable[[], Awaitable[Any]], timeout: float) -> Any:
     started = time.monotonic()
     try:
@@ -187,7 +205,7 @@ async def run_diagnostics(
     await step("get_auto_rotation_status", tv.get_auto_rotation_status)
     await step("get_artmode_settings", tv.get_artmode_settings)
     await step("get_brightness", tv.get_brightness)
-    content_id = current.get("content_id") if isinstance(current, dict) else None
+    content_id = thumbnail_content_id(current, content)
     if content_id:
         thumbnail = await step("get_thumbnail", lambda: tv.get_thumbnail(content_id))
         if isinstance(thumbnail, (bytes, bytearray)):
