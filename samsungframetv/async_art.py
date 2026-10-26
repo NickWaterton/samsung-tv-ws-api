@@ -43,6 +43,18 @@ ART_COOLDOWN_MAX = 240
 # seconds to wait for a reply. A TV with another client on the art channel (eg openHAB or
 # Home Assistant) can take more than 2s to answer content requests
 ART_RESPONSE_TIMEOUT = 5
+# an upload that timed out can still be added by the TV later. Its image_added is matched to it, not
+# to the next upload, for this many seconds (issues #10 and #27)
+UPLOAD_LATE_REPLY_WINDOW = 300
+
+
+class _UploadWaiter:
+    """an upload waiting for the TV's image_added event"""
+
+    def __init__(self, request_id: str) -> None:
+        self.request_id = request_id
+        self.future: asyncio.Future = asyncio.get_running_loop().create_future()
+        self.abandoned_at: Optional[float] = None
 
 
 class ArtChannelEmitCommand(SamsungTVCommand):
@@ -93,6 +105,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self._art_unavailable_until = 0.0
         self._thumbnail_list_only = False   # 2022+ Frames only answer get_thumbnail_list
         self._slideshow_name: Optional[str] = None   # auto_rotation or slideshow, see _slideshow_request
+        self._upload_waiters: List[_UploadWaiter] = []   # in upload order, see _match_image_added
         self.get_token()
             
     def get_token(self):
@@ -234,6 +247,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                     asyncio.create_task(awaitable)
                 
             request_id = data.get('request_id', data.get('id'))
+            if sub_event == "image_added" and self._match_image_added(request_id, response):
+                return
             try:
                 if request_id in self.pending_requests.keys():
                     self.pending_requests[request_id].set_result(response)
@@ -242,6 +257,43 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             except asyncio.exceptions.InvalidStateError:    #already completed
                 pass
                 
+    def _match_image_added(self, request_id: Optional[str], response: Dict[str, Any]) -> bool:
+        """
+        give an image_added event to the upload it belongs to, True if it was used. The 2021 Frame (art
+        API 2.03) sends the upload's id, the 2022 (4.3.4.0) sends none, so those go to the oldest upload,
+        which is the one the TV finished first. Uploads that timed out stay in the list for a while, so
+        their late event is not taken as the answer to the next upload
+        """
+        now = time.monotonic()
+        self._upload_waiters = [
+            w for w in self._upload_waiters if w.abandoned_at is None or now - w.abandoned_at < UPLOAD_LATE_REPLY_WINDOW
+        ]
+        if not self._upload_waiters:
+            return False
+        if request_id:
+            waiter = next((w for w in self._upload_waiters if w.request_id == request_id), None)
+            if waiter is None:
+                _LOGGING.debug("image_added for an upload we are not waiting for: %s", request_id)
+                return True
+        else:
+            waiter = self._upload_waiters[0]
+        self._upload_waiters.remove(waiter)
+        if waiter.abandoned_at is not None:
+            _LOGGING.warning("%s added an upload %.0fs after it timed out: %s", self.host, now - waiter.abandoned_at,
+                             json.loads(response["data"]).get("content_id"))
+        elif not waiter.future.done():
+            waiter.future.set_result(response)
+        return True
+
+    async def _wait_for_image_added(self, waiter: _UploadWaiter, timeout: float) -> Optional[Dict[str, Any]]:
+        try:
+            response = await asyncio.wait_for(asyncio.shield(waiter.future), timeout)
+        except asyncio.TimeoutError:
+            waiter.abandoned_at = time.monotonic()
+            _LOGGING.warning("%s did not confirm the upload within %ss, it may still be added", self.host, timeout)
+            return None
+        return json.loads(response["data"])
+
     def set_callback(self, trigger, callback=None):
         if not callback:
             self.callbacks.pop(trigger, None)
@@ -620,7 +672,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             thumbnail_data_dict[filename] = thumbnail_data
         return thumbnail_data_dict if as_dict else list(thumbnail_data_dict.values()) if len(content_id_list) > 1 else thumbnail_data
 
-    async def upload(self, file, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None, timeout=10, CHUNK_SIZE=64*1024):
+    async def upload(self, file, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None, timeout=30, CHUNK_SIZE=64*1024):
         '''
         NOTE: both id's and request_id have to be the same
 
@@ -711,6 +763,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             }
         )
         assert data
+        waiter = _UploadWaiter(self.art_uuid)
+        self._upload_waiters.append(waiter)
         conn_info = json.loads(data["conn_info"])
         header = json.dumps(
             {
@@ -724,7 +778,11 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             }
         )
 
-        reader, writer = await self._open_d2d_connection(conn_info)
+        try:
+            reader, writer = await self._open_d2d_connection(conn_info)
+        except Exception:
+            self._upload_waiters.remove(waiter)
+            raise
         writer.write(len(header).to_bytes(4, "big"))
         writer.write(header.encode("ascii"))
         #writer.write(file)
@@ -733,7 +791,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             writer.write(chunk)
             await writer.drain()
         writer.close()
-        data = await self.wait_for_response("image_added", timeout=timeout)
+        data = await self._wait_for_image_added(waiter, timeout)
         return data["content_id"] if data else None
 
     async def _upload_binary(self, data, matte, file_type, timeout=10):
