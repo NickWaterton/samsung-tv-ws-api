@@ -595,14 +595,28 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         assert data
         return data
  
+    @staticmethod
+    async def _read_thumbnail_header(reader, writer, content_id, eof_ok=False):
+        try:
+            header_len = int.from_bytes(await reader.readexactly(4), "big")
+        except asyncio.IncompleteReadError as e:
+            writer.close()
+            if e.partial:
+                raise
+            if eof_ok:
+                return None
+            # the TV closed the socket without sending anything, seen for some Art Store items
+            raise exceptions.ThumbnailUnavailableError(content_id) from e
+        return json.loads(await reader.readexactly(header_len))
+
     async def get_thumbnail_list(self, content_id_list=[]):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
-        content_id_list=[{"content_id": id} for id in content_id_list]
+        requested = list(content_id_list)
         data = await self._send_art_request(
             {
                 "request": "get_thumbnail_list",
-                "content_id_list": content_id_list,
+                "content_id_list": [{"content_id": id} for id in requested],
                 "conn_info": {
                     "d2d_mode": "socket",
                     "connection_id": random.randrange(4 * 1024 * 1024 * 1024),
@@ -617,14 +631,17 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         current_thumb = -1
         thumbnail_data_dict: Dict[str, bytes] = {}
         while current_thumb+1 < total_num_thumbnails:
-            header_len = int.from_bytes(await reader.readexactly(4), "big")
-            header = json.loads(await reader.readexactly(header_len))
+            # the TV leaves out items it has no thumbnail for and closes the socket early
+            header = await self._read_thumbnail_header(reader, writer, requested, eof_ok=bool(thumbnail_data_dict))
+            if header is None:
+                break
             thumbnail_data_len = int(header["fileLength"])
             current_thumb = int(header["num"])
             total_num_thumbnails = int(header["total"])
             filename = "{}.{}".format(header["fileID"], header["fileType"])
             thumbnail_data_dict[filename] = await reader.readexactly(thumbnail_data_len)
         writer.close()
+        helper.log_missing_thumbnails(self.host, requested, thumbnail_data_dict)
         return thumbnail_data_dict
 
     async def get_thumbnail(self, content_id_list=[], as_dict=False):
@@ -663,13 +680,20 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 continue
             conn_info = json.loads(data["conn_info"])
             reader, writer = await self._open_d2d_connection(conn_info, secured=False)
-            header_len = int.from_bytes(await reader.readexactly(4), "big")
-            header = json.loads(await reader.readexactly(header_len))
+            try:
+                header = await self._read_thumbnail_header(reader, writer, content_id)
+            except exceptions.ThumbnailUnavailableError:
+                if len(content_id_list) == 1:
+                    raise
+                continue    # keep the others
             thumbnail_data_len = int(header["fileLength"])
             thumbnail_data = await reader.readexactly(thumbnail_data_len)
             writer.close()
             filename = "{}.{}".format(header["fileID"], header["fileType"])
             thumbnail_data_dict[filename] = thumbnail_data
+        if content_id_list and not thumbnail_data_dict:
+            raise exceptions.ThumbnailUnavailableError(content_id_list)
+        helper.log_missing_thumbnails(self.host, content_id_list, thumbnail_data_dict)
         return thumbnail_data_dict if as_dict else list(thumbnail_data_dict.values()) if len(content_id_list) > 1 else thumbnail_data
 
     async def upload(self, file, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None, timeout=30, CHUNK_SIZE=64*1024):

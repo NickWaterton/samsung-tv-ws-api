@@ -11,7 +11,7 @@ import base64
 import json
 import logging
 import ssl
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from . import exceptions
 
@@ -127,6 +127,15 @@ ART_SETTINGS_REQUESTED_ONE_BY_ONE = ("brightness", "color_temperature", "motion_
 def thumbnail_name(content_id: str, data: Union[bytes, bytearray]) -> str:
     """file name for an inline thumbnail, from its magic number"""
     return "{}.{}".format(content_id, "png" if bytes(data[:4]) == b"\x89PNG" else "jpg")
+
+
+def log_missing_thumbnails(host: str, requested: Any, received: Dict[str, Any]) -> List[str]:
+    """log and return the requested items the TV sent no thumbnail for (some Art Store items)"""
+    got = {name.rsplit(".", 1)[0] for name in received}
+    missing = [str(content_id) for content_id in requested if str(content_id) not in got]
+    if missing:
+        _LOGGING.info("%s sent no thumbnail for %s", host, ", ".join(missing))
+    return missing
 
 
 def parse_matte_list(data: Dict[str, Any], include_colour: bool = False) -> Any:

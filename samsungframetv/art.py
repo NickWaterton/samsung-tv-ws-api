@@ -418,14 +418,25 @@ class SamsungTVArt(SamsungTVWSConnection):
         assert data
         return data
 
+    @staticmethod
+    def _read_thumbnail_header(art_socket, content_id, eof_ok=False):
+        header_len = art_socket.recv(4)
+        if not header_len:
+            art_socket.close()
+            if eof_ok:
+                return None
+            # the TV closed the socket without sending anything, seen for some Art Store items
+            raise exceptions.ThumbnailUnavailableError(content_id)
+        return json.loads(art_socket.recv(int.from_bytes(header_len, "big")))
+
     def get_thumbnail_list(self, content_id_list=[]):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
-        content_id_list=[{"content_id": id} for id in content_id_list]
+        requested = list(content_id_list)
         data = self._send_art_request(
             {
                 "request": "get_thumbnail_list",
-                "content_id_list": content_id_list,
+                "content_id_list": [{"content_id": id} for id in requested],
                 "conn_info": {
                     "d2d_mode": "socket",
                     "connection_id": random.randrange(4 * 1024 * 1024 * 1024),
@@ -438,10 +449,12 @@ class SamsungTVArt(SamsungTVWSConnection):
         art_socket = self._open_d2d_socket(conn_info)
         total_num_thumbnails = 1
         current_thumb = -1
-        thumbnail_data_dict = {}
+        thumbnail_data_dict: Dict[str, bytearray] = {}
         while current_thumb+1 < total_num_thumbnails:
-            header_len = int.from_bytes(art_socket.recv(4), "big")
-            header = json.loads(art_socket.recv(header_len))
+            # the TV leaves out items it has no thumbnail for and closes the socket early
+            header = self._read_thumbnail_header(art_socket, requested, eof_ok=bool(thumbnail_data_dict))
+            if header is None:
+                break
             thumbnail_data_len = int(header["fileLength"])
             current_thumb = int(header["num"])
             total_num_thumbnails = int(header["total"])
@@ -451,6 +464,7 @@ class SamsungTVArt(SamsungTVWSConnection):
                 packet = art_socket.recv(thumbnail_data_len - len(thumbnail_data))
                 thumbnail_data.extend(packet)
             thumbnail_data_dict[filename]=thumbnail_data
+        helper.log_missing_thumbnails(self.host, requested, thumbnail_data_dict)
         return thumbnail_data_dict
 
     def get_thumbnail(self, content_id_list=[], as_dict=False):
@@ -483,8 +497,12 @@ class SamsungTVArt(SamsungTVWSConnection):
             conn_info = json.loads(data["conn_info"])
 
             art_socket = self._open_d2d_socket(conn_info, secured=False)
-            header_len = int.from_bytes(art_socket.recv(4), "big")
-            header = json.loads(art_socket.recv(header_len))
+            try:
+                header = self._read_thumbnail_header(art_socket, content_id)
+            except exceptions.ThumbnailUnavailableError:
+                if len(content_id_list) == 1:
+                    raise
+                continue    # keep the others
 
             thumbnail_data_len = int(header["fileLength"])
             thumbnail_data = bytearray()
@@ -494,6 +512,9 @@ class SamsungTVArt(SamsungTVWSConnection):
             filename = "{}.{}".format(header["fileID"], header["fileType"])
             thumbnail_data_dict[filename] = thumbnail_data
 
+        if content_id_list and not thumbnail_data_dict:
+            raise exceptions.ThumbnailUnavailableError(content_id_list)
+        helper.log_missing_thumbnails(self.host, content_id_list, thumbnail_data_dict)
         return thumbnail_data_dict if as_dict else list(thumbnail_data_dict.values()) if len(content_id_list) > 1 else thumbnail_data
 
     def upload(self, file, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None, CHUNK_SIZE=64*1024):

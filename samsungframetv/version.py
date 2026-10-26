@@ -25,4 +25,7 @@
 #               so a late reply is not taken for the next upload (issues #10, #27), async upload() waits 30s,
 #               diagnose tests the thumbnail of a user photo (the 2021 Frame sends none for Art Store items)
 
-__version__ = '4.1.2'
+# version 4.1.3 (in development) get_thumbnail() and get_thumbnail_list() raise ThumbnailUnavailableError when the TV
+#               sends no thumbnail (some Art Store items)
+
+__version__ = '4.1.3.dev1'

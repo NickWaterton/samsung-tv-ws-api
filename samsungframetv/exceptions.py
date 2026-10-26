@@ -6,6 +6,8 @@ Copyright (C) 2019 DSR! <xchwarze@gmail.com>
 SPDX-License-Identifier: LGPL-3.0
 """
 
+import asyncio
+
 
 class ConnectionFailure(Exception):
     """Error during connection."""
@@ -33,6 +35,23 @@ class ResponseError(Exception):
     """Error in response."""
 
     pass
+
+
+class ThumbnailUnavailableError(ResponseError, asyncio.IncompleteReadError):
+    """The TV closed the transfer socket without sending a thumbnail.
+
+    Seen for some Art Store items (SAM-...): the same item fails every time on one TV
+    and can work on another. Also an asyncio.IncompleteReadError, which is what
+    get_thumbnail() raised for these before.
+    """
+
+    def __init__(self, content_id: object = None) -> None:
+        asyncio.IncompleteReadError.__init__(self, b"", 4)
+        self.content_id = content_id
+        self.args = ("TV sent no thumbnail for {}".format(content_id),)
+
+    def __str__(self) -> str:
+        return str(self.args[0])
 
 
 class HttpApiError(Exception):

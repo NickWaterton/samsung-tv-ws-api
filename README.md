@@ -312,11 +312,13 @@ Samsung changes the art API between model years and firmware, and I only own a 2
 | 2017 Frame (LS003) | Art API 1.07. Upload and thumbnails use the older single binary message, chosen automatically. Based on owner reports, not tested here. |
 | 2018 Frame (LS03N) | As 2017. The matte list comes in an older format, which is handled (issue #35). Not tested here. |
 | 2019 and 2020 Frames | No reports yet. |
-| 2021 Frame (LS03A) | Art API 2.03. Tested here. Has no `get_artmode_settings` request (it arrived in art API 4.3.4.0) but has one request per setting, which `get_artmode_settings()` uses instead. `get_thumbnail()` works for your own photos (`MY_...`), but for Art Store items (`SAM-...`) the TV closes the transfer socket without sending anything, so it raises `IncompleteReadError`. |
+| 2021 Frame (LS03A) | Art API 2.03. Tested here. Has no `get_artmode_settings` request (it arrived in art API 4.3.4.0) but has one request per setting, which `get_artmode_settings()` uses instead. `get_thumbnail()` works for your own photos (`MY_...`), but many Art Store items (`SAM-...`) get no thumbnail, see the note on thumbnails below the table. |
 | 2022 Frame (LS03B) | Art API 4.3.4.0. Tested here. `get_thumbnail` was replaced by `get_thumbnail_list` in this version, which `get_thumbnail()` uses automatically. The art service can stop answering, see "Timeouts and recovery". |
 | 2023 and 2024 Frames (LS03C, LS03D) | Reported working by users. 2024 models pair on the remote channel first. |
 | 2025 Frame (LS03F) | Reports REST `PowerState: standby` in art mode, which `in_artmode()` and `get_power_state()` allow for (issue #33). Long press of `KEY_POWER` does not power off (issue #29), use IP Control `power_off()`. Not tested here. |
 | Other TVs with art mode (eg S95H) | Report `FrameTVSupport: false`, so `supported()` asks the art channel instead (issue #34). Not tested here. |
+
+Art Store thumbnails: for some Art Store items (`SAM-...`) the TV accepts the thumbnail request and then closes the transfer socket without sending anything, even for the art on screen. The same item fails every time on one TV and can work on another (on our 2021 Frame 71 of 120 store items failed, on the 2022 Frame 7 of 97). We don't know why yet. When you ask for several items, `get_thumbnail()` and `get_thumbnail_list()` return the thumbnails that arrived and log the missing ones. When none arrive, or you asked for one item, they raise `exceptions.ThumbnailUnavailableError`, which is also an `asyncio.IncompleteReadError` (what they raised before), so skip the item or show a placeholder.
 
 The slideshow request was called `auto_rotation` up to art API 2.03 and renamed `slideshow` in 4.3.4.0. `get_slideshow_status()` and `get_auto_rotation_status()` (and the `set_` calls) are the same, and send whichever name the TV answers.
 
