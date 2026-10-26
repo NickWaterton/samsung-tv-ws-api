@@ -17,7 +17,7 @@ from pathlib import Path
 import asyncio
 import time
 import aiohttp
-from typing import Any, Dict, List, Optional, Union, Callable, Awaitable
+from typing import Any, Dict, List, Optional, Union, Callable, Awaitable, TypeVar
 from urllib.parse import urlparse
 import uuid
 
@@ -31,6 +31,7 @@ from .helper import get_ssl_context, is_true
 from . import ipcontrol
 
 _LOGGING = logging.getLogger(__name__)
+_T = TypeVar("_T")
 
 ART_ENDPOINT = "com.samsung.art-app"
 
@@ -174,6 +175,14 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             )
         return data
 
+    def _check_reply(self, data: Optional[_T]) -> _T:
+        """raise ArtRequestTimeoutError when an art request got no answer (used to be a bare assert)"""
+        if not data:
+            raise exceptions.ArtRequestTimeoutError(
+                "{} did not answer the art request {}".format(self.host, getattr(self, "_last_art_request", None))
+            )
+        return data
+
     async def _send_art_request(
         self,
         request_data: Dict[str, Any],
@@ -188,6 +197,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         if not request_data.get("id"):
             request_data["id"] = self.get_uuid()            #old api
         request_data["request_id"] = request_data["id"]     #new api
+        self._last_art_request = request_data.get("request")
         self.pending_requests[wait_for_event or request_data["id"]] = asyncio.Future()
         await self.start_listening()
         # no key press delay, the reply is what we wait for
@@ -384,7 +394,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             data = await self._send_art_request(
                 {"request": "get_api_version"}
             )
-        assert data
+        data = self._check_reply(data)
         self._api_version = data["version"]
         return data["version"]
 
@@ -410,7 +420,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "get_device_info"}
         )
-        assert data
+        data = self._check_reply(data)
         return data
 
     async def available(self, category=None, timeout=10):
@@ -421,14 +431,14 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             {"request": "get_content_list", "category": category},
             timeout=timeout
         )
-        assert data
+        data = self._check_reply(data)
         return [ v for v in json.loads(data["content_list"]) if v["category_id"] == category] if category else json.loads(data["content_list"])
 
     async def get_current(self):
         data = await self._send_art_request(
             {"request": "get_current_artwork"}
         )
-        assert data
+        data = self._check_reply(data)
         return data
         
     async def set_favourite(self, content_id, status="on"):
@@ -439,7 +449,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 "status": status},
             wait_for_event = "favorite_changed"
         )
-        assert data
+        data = self._check_reply(data)
         return data
         
     async def _artmode_settings_one_by_one(self, setting=''):
@@ -472,7 +482,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 data = await self._send_art_request(
                     {"request": "get_artmode_settings"}
                 )
-                assert data
+                data = self._check_reply(data)
                 data = json.loads(data['data'])
             except exceptions.ResponseError:
                 data = await self._artmode_settings_one_by_one(setting)
@@ -480,7 +490,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                     raise
         else:
             data = await self._artmode_settings_one_by_one(setting)
-            assert data
+            data = self._check_reply(data)
         return next(iter(item for item in data if item['item'] == setting), data)
 
     async def _slideshow_request(self, action, fields=None):
@@ -502,7 +512,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 return data
         if error:
             raise error
-        raise AssertionError("no answer to {}_slideshow_status".format(action))
+        raise exceptions.ArtRequestTimeoutError("{} did not answer {}_slideshow_status".format(self.host, action))
 
     @staticmethod
     def _slideshow_fields(duration, type, category):
@@ -540,7 +550,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "get_brightness"}
         )
-        assert data
+        data = self._check_reply(data)
         return data
 
     async def set_brightness(self, value):
@@ -548,7 +558,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "set_brightness", "value": value}
         )
-        assert data
+        data = self._check_reply(data)
         return data
         
     async def get_color_temperature(self):
@@ -560,7 +570,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "get_color_temperature"}
         )
-        assert data
+        data = self._check_reply(data)
         return data
 
     async def set_color_temperature(self, value):
@@ -568,7 +578,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "set_color_temperature", "value": value}
         )
-        assert data
+        data = self._check_reply(data)
         return data
         
     async def set_brightness_sensor_setting(self, value):
@@ -576,7 +586,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "set_brightness_sensor_setting", "value": value}
         )
-        assert data
+        data = self._check_reply(data)
         return data
         
     async def set_motion_timer(self, value):
@@ -584,7 +594,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "set_motion_timer", "value": value}
         )
-        assert data
+        data = self._check_reply(data)
         return data
         
     async def set_motion_sensitivity(self, value):
@@ -592,7 +602,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "set_motion_sensitivity", "value": value}
         )
-        assert data
+        data = self._check_reply(data)
         return data
  
     @staticmethod
@@ -624,7 +634,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 }
             }
         )
-        assert data
+        data = self._check_reply(data)
         conn_info = json.loads(data["conn_info"])
         reader, writer = await self._open_d2d_connection(conn_info)
         total_num_thumbnails = 1
@@ -672,7 +682,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 _LOGGING.info("%s did not answer get_thumbnail, using get_thumbnail_list", self.host)
                 self._thumbnail_list_only = True
                 return await self.get_thumbnail(content_id_list, as_dict)
-            assert data
+            data = self._check_reply(data)
             if data.get("binary"):
                 # older art API's send the thumbnail inline
                 thumbnail_data = bytes(data["binary"])
@@ -786,7 +796,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 "file_size": file_size,
             }
         )
-        assert data
+        data = self._check_reply(data)
         waiter = _UploadWaiter(self.art_uuid)
         self._upload_waiters.append(waiter)
         conn_info = json.loads(data["conn_info"])
@@ -860,7 +870,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 "request": "get_artmode_status",
             }
         )
-        assert data
+        data = self._check_reply(data)
         return data["value"]
 
     async def set_artmode(self, mode):
@@ -876,14 +886,14 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "get_current_rotation"}
         )
-        assert data
+        data = self._check_reply(data)
         return data.get("current_rotation_status",0)
 
     async def get_photo_filter_list(self):
         data = await self._send_art_request(
             {"request": "get_photo_filter_list"}
         )
-        assert data
+        data = self._check_reply(data)
         return json.loads(data["filter_list"])
 
     async def set_photo_filter(self, content_id, filter_id):
@@ -899,7 +909,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = await self._send_art_request(
             {"request": "get_matte_list"}
         )
-        assert data
+        data = self._check_reply(data)
         return helper.parse_matte_list(data, include_colour)
 
     async def change_matte(self, content_id, matte_id=None, portrait_matte=None):
