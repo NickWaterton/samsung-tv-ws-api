@@ -109,3 +109,25 @@ def test_remove_mats_example_with_upper_case_ids() -> None:
     assert example.get_target_matte(None, "antique", art) == "shadowbox_antique"
     assert example.get_target_matte("org", None, art) == "shadowbox_polar"
     assert example.get_target_matte("org", None, art, landscape=False) == "none"
+
+
+def test_parse_json_string() -> None:
+    # the slideshow reply on 6.0 when it is off
+    assert helper.parse_json_string("", []) == []
+    assert helper.parse_json_string(None, {}) == {}
+    assert helper.parse_json_string('[{"content_id": "MY_F0487"}]') == [{"content_id": "MY_F0487"}]
+    # quotes as HTML entities, as openHAB saw from 6.0
+    assert helper.parse_json_string("[{&#34;content_id&#34;: &#34;MY_F0487&#34;}]") == [{"content_id": "MY_F0487"}]
+    assert helper.parse_json_string("{&quot;port&quot;: &quot;56019&quot;}") == {"port": "56019"}
+    assert helper.parse_json_string([1]) == [1]
+    with pytest.raises(ValueError):
+        helper.parse_json_string("not json")
+
+
+@pytest.mark.asyncio
+async def test_content_list_with_html_entities() -> None:
+    with patch.object(SamsungTVAsyncArt, "get_token"):
+        tv = SamsungTVAsyncArt("127.0.0.1")
+    items = '[{&#34;content_id&#34;: &#34;SAM-S5825&#34;, &#34;category_id&#34;: &#34;MY-C0004&#34;}]'
+    tv._send_art_request = AsyncMock(return_value={"event": "get_content_list", "content_list": items})
+    assert await tv.available("MY-C0004") == [{"content_id": "SAM-S5825", "category_id": "MY-C0004"}]

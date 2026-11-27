@@ -8,6 +8,7 @@ SPDX-License-Identifier: LGPL-3.0
 """
 
 import base64
+import html
 import json
 import logging
 import ssl
@@ -28,6 +29,26 @@ def serialize_string(string: Union[str, bytes]) -> str:
         string = str.encode(string)
 
     return base64.b64encode(string).decode("utf-8")
+
+
+def parse_json_string(value: Any, default: Any = None) -> Any:
+    """
+    JSON that a reply holds in a string, eg content_list or conn_info. '' or None gives default (art API 6.0
+    sends content_list '' when the slideshow is off). If it is not JSON but has HTML entities (eg &#34; for a
+    quote, seen from art API 6.0), they are decoded and it is tried again
+    """
+    if value is None or value == "":
+        return default
+    if not isinstance(value, (str, bytes, bytearray)):
+        return value
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        if isinstance(value, str) and "&" in value:
+            unescaped = html.unescape(value)
+            if unescaped != value:
+                return json.loads(unescaped)
+        raise
 
 
 def process_api_response(response: Union[str, bytes]) -> Dict[str, Any]:
@@ -146,12 +167,11 @@ def parse_matte_list(data: Dict[str, Any], include_colour: bool = False) -> Any:
     which are split here.
     """
     if "matte_type_list" in data:
-        types = json.loads(data["matte_type_list"])
-        colours = json.loads(data.get("matte_color_list", "[]"))
+        types = parse_json_string(data["matte_type_list"], [])
+        colours = parse_json_string(data.get("matte_color_list"), [])
     else:
         mattes = data.get("matte_types", data.get("matte_list", []))
-        if isinstance(mattes, str):
-            mattes = json.loads(mattes)
+        mattes = parse_json_string(mattes, [])
         types, colours = [], []
         for matte in mattes:
             matte_type, _, colour = matte.get("matte_id", "").lower().partition("_")
