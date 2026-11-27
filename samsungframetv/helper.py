@@ -11,7 +11,7 @@ import base64
 import json
 import logging
 import ssl
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from . import exceptions
 
@@ -154,12 +154,32 @@ def parse_matte_list(data: Dict[str, Any], include_colour: bool = False) -> Any:
             mattes = json.loads(mattes)
         types, colours = [], []
         for matte in mattes:
-            matte_type, _, colour = matte.get("matte_id", "").partition("_")
+            matte_type, _, colour = matte.get("matte_id", "").lower().partition("_")
             if matte_type and {"matte_type": matte_type} not in types:
                 types.append({"matte_type": matte_type})
             if colour and {"color": colour} not in colours:
                 colours.append({"color": colour})
     return (types, colours) if include_colour else types
+
+
+def split_matte_id(matte_id: Optional[str]) -> Tuple[str, Optional[str]]:
+    """
+    matte id as (type, colour), eg 'shadowbox_polar' is ('shadowbox', 'polar') and 'none' is ('none', None).
+    Art API 6.0 sends upper case ids for Art Store items (eg 'SHADOWBOX_POLAR', 'NONE') or an empty
+    string, while get_matte_list() is lower case, so the result is lower case and '' or None is 'none'
+    """
+    matte_type, _, colour = (matte_id or "none").lower().partition("_")
+    return matte_type, colour or None
+
+
+def normalise_matte_id(matte_id: Optional[str]) -> str:
+    """lower case matte id, 'none' for '' or None, eg 'SHADOWBOX_POLAR' is 'shadowbox_polar'"""
+    return "_".join(part for part in split_matte_id(matte_id) if part)
+
+
+def same_matte(matte_id: Optional[str], other: Optional[str]) -> bool:
+    """True if two matte ids are the same matte, whatever their case, eg 'NONE' and 'none'"""
+    return normalise_matte_id(matte_id) == normalise_matte_id(other)
 
 
 def rest_power_state(data: Optional[Dict[str, Any]]) -> Optional[str]:

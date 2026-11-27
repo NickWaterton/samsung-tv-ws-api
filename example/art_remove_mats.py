@@ -3,7 +3,7 @@ import sys
 
 sys.path.append("../")
 
-from samsungframetv import SamsungTVWS  # noqa: E402
+from samsungframetv import SamsungTVWS, helper  # noqa: E402
 
 # Increase debug level
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +37,8 @@ available_art = tv.art().available()
 
 for art in available_art:
     try:
-        if art["matte_id"] != target_matte_type:
+        # art API 6.0 sends upper case ids (eg SHADOWBOX_POLAR) or '' for Art Store items
+        if not helper.same_matte(art["matte_id"], target_matte_type):
             logging.info(
                 "Setting matte to {} for {}".format(target_matte_type, art["content_id"])
             )

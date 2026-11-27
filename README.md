@@ -204,6 +204,11 @@ tv.art().upload(data, file_type='JPEG')
 # To set the matte to modern and apricot color
 tv.art().upload(data, matte='modern_apricot')
 
+# Compare matte ids with helper.same_matte(), art API 6.0 sends upper case ids (eg 'SHADOWBOX_POLAR') or ''
+# for Art Store items. helper.split_matte_id('SHADOWBOX_POLAR') gives ('shadowbox', 'polar')
+from samsungframetv import helper
+helper.same_matte(tv.art().get_current()['matte_id'], 'shadowbox_polar')
+
 # Delete an uploaded item
 tv.art().delete('MY-F0020')
 
@@ -316,7 +321,7 @@ Samsung changes the art API between model years and firmware, and I only own a 2
 | 2018 Frame (LS03N) | Art API 0.97. Confirmed working by an owner (issue #35): inline thumbnails, `upload()`, `delete_list()` and `get_matte_list()`. The matte list comes as combined ids like `shadowbox_polar`, which `get_matte_list()` splits into types and colours. REST info has no `PowerState`, which is taken as on. `get_device_info` and `get_photo_filter_list` return error -9. With art mode off the art channel does not answer at all, so art requests time out. |
 | 2019 and 2020 Frames | No reports yet. |
 | 2021 Frame (LS03A) | Art API 2.03. Tested here. Has no `get_artmode_settings` request (it arrived in art API 4.3.4.0) but has one request per setting, which `get_artmode_settings()` uses instead. `get_thumbnail()` works for your own photos (`MY_...`), but many Art Store items (`SAM-...`) get no thumbnail, see the note on thumbnails below the table. |
-| 2022 Frame (LS03B) | Art API 4.3.4.0, and 6.0.0.0 after a firmware update in November 2026. Tested here with both. `get_thumbnail` was replaced by `get_thumbnail_list` in 4.3.4.0, which `get_thumbnail()` uses automatically. The art service can stop answering, see "Timeouts and recovery". On 6.0 the TV sends no standby or wake events and reports art mode on while in standby, see "Power State and IP Control". |
+| 2022 Frame (LS03B) | Art API 4.3.4.0, and 6.0.0.0 after a firmware update in November 2026. Tested here with both. `get_thumbnail` was replaced by `get_thumbnail_list` in 4.3.4.0, which `get_thumbnail()` uses automatically. The art service can stop answering, see "Timeouts and recovery". On 6.0 the TV sends no standby or wake events and reports art mode on while in standby, see "Power State and IP Control". It also sends upper case matte ids for Art Store items (eg `SHADOWBOX_POLAR`, or an empty string), and 0 for the width and height of many, while your own photos and `get_matte_list()` stay lower case. |
 | 2023 and 2024 Frames (LS03C, LS03D) | Reported working by users. 2024 models pair on the remote channel first. |
 | 2025 Frame (LS03F) | Reports REST `PowerState: standby` in art mode, which `in_artmode()` and `get_power_state()` allow for (issue #33). Long press of `KEY_POWER` does not power off (issue #29), use IP Control `power_off()`. Not tested here. |
 | Other TVs with art mode (eg S95H) | Report `FrameTVSupport: false`, so `supported()` asks the art channel instead (issue #34). Not tested here. |

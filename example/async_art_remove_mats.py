@@ -7,7 +7,7 @@ import asyncio
 import argparse
 
 from samsungframetv.async_art import SamsungTVAsyncArt
-from samsungframetv import __version__
+from samsungframetv import __version__, helper
 from samsungframetv.exceptions import ResponseError
 
 
@@ -27,6 +27,7 @@ def parse_args(mat_types, mat_colors, matte):
     check mat is valid, and return mat and color
     '''
     if matte is not None:
+        matte = matte.lower()
         if matte not in ['none', 'org']:
             if matte in mat_types:
                 mat = matte
@@ -35,7 +36,7 @@ def parse_args(mat_types, mat_colors, matte):
                 mat = None
                 color = matte
             elif '_' in matte:
-                mat, color = matte.split('_')
+                mat, color = helper.split_matte_id(matte)
             else:
                 mat = color = None
 
@@ -50,7 +51,8 @@ def get_target_matte(matte, color, art, landscape=True):
     get new matte setting from mat, color and original art matte setting
     '''
     target_matte_type = 'none'
-    org_matte_id = art["matte_id" if landscape else "portrait_matte_id"]
+    # art API 6.0 sends upper case ids (eg SHADOWBOX_POLAR) or '' for Art Store items
+    org_matte_id = helper.normalise_matte_id(art["matte_id" if landscape else "portrait_matte_id"])
     if matte == 'org' or (matte is None and color is None):
         target_matte_type = org_matte_id
     elif matte != 'none':
@@ -60,12 +62,12 @@ def get_target_matte(matte, color, art, landscape=True):
             if org_matte_id == 'none':
                 logging.warning(f"can't change color/type of {'landscape' if landscape else 'portrait'} mat: {org_matte_id} for {art['content_id']} to {matte or color}")
             else:
-                org_mat, org_color = org_matte_id.split('_')
+                org_mat, org_color = helper.split_matte_id(org_matte_id)
                 if color is None:
                     color = org_color
                 if matte is None:
                     matte = org_mat
-                target_matte_type = '{}_{}'.format(matte, color)
+                target_matte_type = '{}_{}'.format(matte, color) if color else matte
     return target_matte_type
         
 async def main():
@@ -104,14 +106,15 @@ async def main():
                 target_matte_type = get_target_matte(mat, color, art, True)
                 portrait_target_matte_type = get_target_matte(pmat, pcolor, art, False)
                     
-                if art["matte_id"] != target_matte_type or art["portrait_matte_id"] != portrait_target_matte_type:
+                portrait_unchanged = helper.same_matte(art["portrait_matte_id"], portrait_target_matte_type)
+                if not helper.same_matte(art["matte_id"], target_matte_type) or not portrait_unchanged:
                     logging.info(
                         f"Setting landscape matte to {target_matte_type}"
-                        f"{' and portrait matte to {}'.format(portrait_target_matte_type) if portrait_target_matte_type != art['portrait_matte_id'] else ''} "
+                        f"{' and portrait matte to {}'.format(portrait_target_matte_type) if not portrait_unchanged else ''} "
                         f"for {art['content_id']}"
                     )
                     try:
-                        await tv.change_matte(art["content_id"], target_matte_type, None if portrait_target_matte_type == art["portrait_matte_id"] else portrait_target_matte_type)
+                        await tv.change_matte(art["content_id"], target_matte_type, None if portrait_unchanged else portrait_target_matte_type)
                     except ResponseError:
                         logging.warning(f'Unable to change mats to {target_matte_type}/{portrait_target_matte_type} for {art["content_id"]} ({art["width"]}x{art["height"]})')
             except KeyError:
