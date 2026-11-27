@@ -32,4 +32,9 @@
 # version 4.1.4 N Waterton October 2026 - 2018 Frame (issue #35): get_matte_list() reads the art API 0.97 'matte_list' reply,
 #               in_artmode() and on() take a missing REST PowerState as on, diagnose shows error -9 as not supported
 
-__version__ = '4.1.4'
+# version 4.2.0 N Waterton November 2026 - 2022 Frame on art API 6.0: art_mode follows the power state (no go_to_standby
+#               event), in_artmode() takes ip_control, set_artmode() returns True/False and accepts art_mode_changed
+#               (2021 sends no reply to 'on'), helper.split_matte_id()/same_matte() for upper case matte ids,
+#               helper.parse_json_string() for '' and HTML entities, diagnose redacts the transfer key and has --watch
+
+__version__ = '4.2.0'
