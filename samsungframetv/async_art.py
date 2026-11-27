@@ -107,6 +107,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self._thumbnail_list_only = False   # 2022+ Frames only answer get_thumbnail_list
         self._slideshow_name: Optional[str] = None   # auto_rotation or slideshow, see _slideshow_request
         self._upload_waiters: List[_UploadWaiter] = []   # in upload order, see _match_image_added
+        self._artmode_waiters: List[Any] = []   # (mode, future) for set_artmode
         self.get_token()
             
     def get_token(self):
@@ -189,7 +190,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self,
         request_data: Dict[str, Any],
         wait_for_event: Optional[str] = None,
-        timeout: float = ART_RESPONSE_TIMEOUT
+        timeout: float = ART_RESPONSE_TIMEOUT,
+        count_timeout: bool = True,
     ) -> Optional[Dict[str, Any]]:
         remaining = self._art_unavailable_until - time.monotonic()
         if remaining > 0:
@@ -207,7 +209,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         await self.send_command(ArtChannelEmitCommand.art_app_request(request_data), key_press_delay=0)
         data = await self.wait_for_response(wait_for_event or request_data["id"], timeout)
         if data is None:
-            await self._art_request_timed_out(request_data.get("request"))
+            if count_timeout:
+                await self._art_request_timed_out(request_data.get("request"))
         else:
             self._art_timeouts = self._art_cooldown = 0
         return data
@@ -249,6 +252,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 self.art_mode = data.get('value', data.get('status', 'off')) == 'on'
             elif sub_event == 'art_mode_changed':
                 self.art_mode = data.get('status', 'off') == 'on'
+            # not get_artmode_status, art API 6.0 says on in standby
+            if sub_event in ('art_mode_changed', 'set_artmode_status', 'artmode_status'):
+                self._art_mode_reported(data.get('value', data.get('status')))
             elif sub_event == 'go_to_standby':
                 self.art_mode = False
             elif 'wakeup' in sub_event:
@@ -270,6 +276,12 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             except asyncio.exceptions.InvalidStateError:    #already completed
                 pass
                 
+    def _art_mode_reported(self, mode: Optional[str]) -> None:
+        """tell set_artmode() waiting for this mode that the TV reported it"""
+        for waiting_for, future in self._artmode_waiters:
+            if waiting_for == mode and not future.done():
+                future.set_result(True)
+
     def _match_image_added(self, request_id: Optional[str], response: Dict[str, Any]) -> bool:
         """
         give an image_added event to the upload it belongs to, True if it was used. The 2021 Frame (art
@@ -894,14 +906,50 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         data = self._check_reply(data)
         return data["value"]
 
-    async def set_artmode(self, mode):
+    async def set_artmode(
+        self,
+        mode,
+        timeout: float = ART_RESPONSE_TIMEOUT,
+        ip_control: Optional[ipcontrol.SamsungTVAsyncIPControl] = None,
+    ) -> bool:
+        """
+        turn art mode on or off, True when the TV reported the new mode within timeout
+        The TV answers with our request id, or only sends art_mode_changed (art API 2.03 does that
+        for 'on'), so either counts. Art API 6.0 ignores the request while it boots, so False can mean
+        try again later.
+        ip_control: optional paired SamsungTVAsyncIPControl, used if the art channel did not switch
+        """
         mode = "on" if is_true(mode) else "off"
-        await self._send_art_request(
-            {
-                "request": "set_artmode_status",
-                "value": mode,
-            }
-        )
+        if await self._set_artmode_art_channel(mode, timeout):
+            return True
+        if ip_control is None:
+            return False
+        _LOGGING.debug("art channel did not switch art mode %s, trying IP Control", mode)
+        await ip_control.async_call("set_artmode", mode == "on")
+        return await ip_control.async_call("get_artmode") == mode
+
+    async def _set_artmode_art_channel(self, mode: str, timeout: float) -> bool:
+        reported = asyncio.get_running_loop().create_future()
+        waiter = (mode, reported)
+        self._artmode_waiters.append(waiter)
+        request_data = {"request": "set_artmode_status", "value": mode, "id": self.get_uuid()}
+        reply = asyncio.ensure_future(self._send_art_request(request_data, timeout=timeout, count_timeout=False))
+        try:
+            done, _ = await asyncio.wait({reply, reported}, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
+            if reported in done:
+                return True
+            if reply in done:
+                data = reply.result()     # raises ResponseError if the TV refused
+                if data is not None:
+                    return data.get("status", data.get("value", mode)) == mode
+            return False
+        finally:
+            self._artmode_waiters.remove(waiter)
+            if not reply.done():
+                reply.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await reply
+                self.pending_requests.pop(request_data["id"], None)
         
     async def get_rotation(self):
         data = await self._send_art_request(

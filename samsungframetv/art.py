@@ -692,14 +692,46 @@ class SamsungTVArt(SamsungTVWSConnection):
         data = self._check_reply(data)
         return data["value"]
 
-    def set_artmode(self, mode):
+    def set_artmode(self, mode, ip_control: Optional[ipcontrol.SamsungTVIPControl] = None) -> bool:
+        """
+        turn art mode on or off, True when the TV reported the new mode
+        The TV answers with our request id, or only sends art_mode_changed (art API 2.03 does that
+        for 'on'), so either counts. Art API 6.0 ignores the request while it boots, so set a timeout
+        on this object, False then means try again later.
+        ip_control: optional paired SamsungTVIPControl, used if the art channel did not switch
+        """
         mode = "on" if is_true(mode) else "off"
-        self._send_art_request(
-            {
-                "request": "set_artmode_status",
-                "value": mode,
-            }
+        if self._set_artmode_art_channel(mode):
+            return True
+        if ip_control is None:
+            return False
+        _LOGGING.debug("art channel did not switch art mode %s, trying IP Control", mode)
+        ip_control.set_artmode(mode == "on")
+        return ip_control.get_artmode() == mode
+
+    def _set_artmode_art_channel(self, mode: str) -> bool:
+        request_id = self.get_uuid()
+        self._last_art_request = "set_artmode_status"
+        self.send_command(
+            ArtChannelEmitCommand.art_app_request(
+                {"request": "set_artmode_status", "value": mode, "id": request_id, "request_id": request_id}
+            ),
+            key_press_delay=0,
         )
+        try:
+            while True:
+                data = self.get_websocket_message()
+                sub_event = data.get("event", "*")
+                if data.get("request_id", data.get("id")) == request_id:
+                    if sub_event == "error":
+                        raise exceptions.ResponseError(
+                            f"set_artmode_status request failed with error number {data['error_code']}"
+                        )
+                    return data.get("status", data.get("value", mode)) == mode
+                if sub_event in ("art_mode_changed", "artmode_status") and data.get("status", data.get("value")) == mode:
+                    return True
+        except exceptions.TimeoutError:
+            return False
 
     def get_rotation(self):
         data = self._send_art_request(
