@@ -106,7 +106,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             self._websocket_event(event, response)
             _LOGGING.debug('event: {}'.format(event))
             if event == D2D_SERVICE_MESSAGE_EVENT:
-                data = json.loads(response["data"])
+                data = helper.parse_json_string(response["data"], {})
                 if response.get("binary"):
                     data["binary"] = response["binary"]    # older art API's send files inline
                 return data
@@ -125,7 +125,7 @@ class SamsungTVArt(SamsungTVWSConnection):
                 _LOGGING.debug('sub_event: {}, wait_for_event: {}'.format(sub_event, wait_for_event))
                 if sub_event == "error":
                     raise exceptions.ResponseError(
-                        f"{json.loads(data['request_data'])['request']} request failed "
+                        f"{helper.parse_json_string(data['request_data'], {}).get('request')} request failed "
                         f"with error number {data['error_code']}"
                     )
                 # Check sub event, return if found or not defined
@@ -248,7 +248,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             {"request": "get_content_list", "category": category}
         )
         data = self._check_reply(data)
-        return [ v for v in json.loads(data["content_list"]) if v["category_id"] == category] if category else json.loads(data["content_list"])
+        return [ v for v in helper.parse_json_string(data["content_list"], []) if v["category_id"] == category] if category else helper.parse_json_string(data["content_list"], [])
 
     def get_current(self):
         data = self._send_art_request(
@@ -308,7 +308,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             return next(iter(item for item in items if item['item'] == setting), items)
         data = self._check_reply(data)
         if 'data' in data.keys():
-            data = json.loads(data["data"])
+            data = helper.parse_json_string(data["data"], {})
             return next(iter(item for item in data if item['item'] == setting), data)
         return data
 
@@ -455,7 +455,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             }
         )
         data = self._check_reply(data)
-        conn_info = json.loads(data["conn_info"])
+        conn_info = helper.parse_json_string(data["conn_info"], {})
         art_socket = self._open_d2d_socket(conn_info)
         total_num_thumbnails = 1
         current_thumb = -1
@@ -504,7 +504,7 @@ class SamsungTVArt(SamsungTVWSConnection):
                 thumbnail_data = bytearray(data["binary"])
                 thumbnail_data_dict[helper.thumbnail_name(content_id, thumbnail_data)] = thumbnail_data
                 continue
-            conn_info = json.loads(data["conn_info"])
+            conn_info = helper.parse_json_string(data["conn_info"], {})
 
             art_socket = self._open_d2d_socket(conn_info, secured=False)
             try:
@@ -619,7 +619,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             wait_for_event="ready_to_use"
         )
         data = self._check_reply(data)
-        conn_info = json.loads(data["conn_info"])
+        conn_info = helper.parse_json_string(data["conn_info"], {})
         header = json.dumps(
             {
                 "num": 0,
@@ -671,7 +671,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             {"request": "delete_image_list", "content_id_list": content_id_list}
         )
         data = self._check_reply(data)
-        return content_id_list == json.loads(data['content_id_list'])
+        return content_id_list == helper.parse_json_string(data["content_id_list"], [])
 
     def select_image(self, content_id, category=None, show=True):
         self._send_art_request(
@@ -745,7 +745,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             {"request": "get_photo_filter_list"}
         )
         data = self._check_reply(data)
-        return json.loads(data["filter_list"])
+        return helper.parse_json_string(data["filter_list"], [])
 
     def set_photo_filter(self, content_id, filter_id):
         self._send_art_request(
