@@ -1,7 +1,7 @@
 """
 Record what a TV reports, so owners of models we can't test can send it in an issue.
 
-usage: python -m samsungframetv.diagnose 192.168.1.20 [--ipcontrol] [--upload IMAGE] [-o report.json]
+usage: python -m samsungframetv.diagnose 192.168.1.20 [--ipcontrol] [--upload IMAGE] [--watch SECONDS] [-o report.json]
 
 Only reads from the TV: it does not upload, delete or change any setting, unless --upload is given,
 which uploads one image and deletes it again. The report has the
@@ -21,11 +21,12 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from . import exceptions, ipcontrol
 from .async_art import SamsungTVAsyncArt
+from .event import D2D_SERVICE_MESSAGE_EVENT
 from .version import __version__
 
 _LOGGING = logging.getLogger(__name__)
 
-REPORT_FORMAT = 1
+REPORT_FORMAT = 2     # 2 added events
 
 _UUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 _MAC = re.compile(r"\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b")
@@ -33,7 +34,7 @@ _MAC = re.compile(r"\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b")
 _IPV4 = re.compile(r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01])|169\.254)\.\d{1,3}\.\d{1,3}\b")
 # values that identify the TV or its owner, whatever they look like
 _PRIVATE_KEYS = {"duid", "id", "udn", "wifiMac", "ip", "token", "deviceName", "name", "uri", "request_id", "connection_id",
-                 "target_client_id"}
+                 "target_client_id", "key"}     # key: the one time key for a transfer socket
 
 
 def redact(value: Any, uuids: Optional[Dict[str, str]] = None) -> Any:
@@ -89,7 +90,9 @@ class _Recorder:
 
     def __init__(self, tv: SamsungTVAsyncArt) -> None:
         self.raw: List[Dict[str, Any]] = []
+        self.events: List[Dict[str, Any]] = []
         self.rest: Optional[Dict[str, Any]] = None
+        self._started = time.monotonic()
         send = tv._send_art_request
         device_info = tv._get_device_info
 
@@ -130,6 +133,19 @@ class _Recorder:
                 entry["seconds"] = round(time.monotonic() - started, 2)
                 self.raw.append(entry)
 
+        process_event = tv.process_event
+
+        async def recorded_event(event: Any = None, response: Any = None) -> Any:
+            # every art channel message, also those that answer nothing, eg go_to_standby
+            if event == D2D_SERVICE_MESSAGE_EVENT and isinstance(response, dict):
+                try:
+                    data = json.loads(response.get("data") or "{}")
+                except ValueError:
+                    data = {"unparsed": response.get("data")}
+                self.events.append({"seconds": round(time.monotonic() - self._started, 2), "data": _summarise_binary(data)})
+            return await process_event(event, response)
+
+        tv.process_event = recorded_event  # type: ignore[method-assign]
         tv._send_art_request = recorded_send  # type: ignore[method-assign]
         tv._get_device_info = recorded_device_info  # type: ignore[method-assign]
         tv.wait_for_response = recorded_wait  # type: ignore[method-assign]
@@ -175,10 +191,12 @@ async def run_diagnostics(
     ip_control: Optional[ipcontrol.SamsungTVAsyncIPControl] = None,
     timeout: float = 15,
     upload_file: Optional[str] = None,
+    watch: float = 0,
 ) -> Dict[str, Any]:
     """
     run the read only checks against tv, returns the redacted report. With upload_file, also upload
-    that image and delete it again, to record how the TV answers an upload
+    that image and delete it again, to record how the TV answers an upload. With watch, keep listening
+    for that many seconds afterwards, to record events the TV sends by itself (eg when it goes to standby)
     """
     recorder = _Recorder(tv)
     steps: Dict[str, Any] = {}
@@ -221,6 +239,9 @@ async def run_diagnostics(
         uploaded = await step("upload", lambda: tv.upload(image, matte="none", portrait_matte="none", file_type=file_type))
         if uploaded:
             await step("delete_uploaded", lambda: tv.delete(uploaded))
+    if watch > 0:
+        print("listening for events for {:.0f}s, eg turn the TV off or on with the remote now".format(watch))
+        await asyncio.sleep(watch)
 
     rest = recorder.rest or {}
     device = rest.get("device", {})
@@ -235,6 +256,7 @@ async def run_diagnostics(
         "rest": rest,
         "steps": steps,
         "raw": recorder.raw,
+        "events": recorder.events,
     }
     # as it will be saved, eg tuples become lists
     return json.loads(json.dumps(redact(report), default=repr))
@@ -252,6 +274,8 @@ def _print_summary(report: Dict[str, Any]) -> None:
             print("  n/a   {:26} not supported by this TV (error -9)".format(name))
         else:
             print("  FAIL  {:26} {}".format(name, step["error"]))
+    events = [event["data"].get("event", "?") for event in report.get("events", []) if isinstance(event.get("data"), dict)]
+    print("  {} art events: {}".format(len(events), ", ".join(sorted(set(events))) or "none"))
 
 
 async def _main(args: argparse.Namespace) -> None:
@@ -263,7 +287,7 @@ async def _main(args: argparse.Namespace) -> None:
             await ip_control.async_pair()
     tv = SamsungTVAsyncArt(args.ip, port=8002, token_file=args.token_file, timeout=args.timeout)
     try:
-        report = await run_diagnostics(tv, ip_control, timeout=args.timeout, upload_file=args.upload)
+        report = await run_diagnostics(tv, ip_control, timeout=args.timeout, upload_file=args.upload, watch=args.watch)
     finally:
         try:
             await tv.close()
@@ -285,6 +309,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser.add_argument("--ipcontrol", action="store_true", help="also ask IP Control (port 1516)")
     parser.add_argument("--upload", metavar="IMAGE", default=None,
                         help="also upload this jpg or png and delete it again (changes the TV's art for a moment)")
+    parser.add_argument("--watch", metavar="SECONDS", type=float, default=0,
+                        help="after the checks, keep listening this long and record the events the TV sends")
     parser.add_argument("--timeout", type=float, default=15, help="seconds to wait for each check (default 15)")
     parser.add_argument("-D", "--debug", action="store_true", help="debug logging")
     args = parser.parse_args(argv)

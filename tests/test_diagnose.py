@@ -301,3 +301,27 @@ def test_thumbnail_content_id_prefers_user_photo() -> None:
     assert diagnose.thumbnail_content_id({"content_id": "SAM-S10000497"}, [{"content_id": "SAM-S1"}]) == "SAM-S10000497"
     assert diagnose.thumbnail_content_id(None, content) == "MY_F0020"
     assert diagnose.thumbnail_content_id(None, None) is None
+
+
+def test_redact_transfer_key() -> None:
+    conn_info = json.dumps({"ip": "192.168.1.166", "port": "56019", "key": "a1b2c3", "secured": True})
+    redacted = json.loads(diagnose.redact({"conn_info": conn_info})["conn_info"])
+    assert redacted == {"ip": "<redacted>", "port": "56019", "key": "<redacted>", "secured": True}
+
+
+@pytest.mark.asyncio
+async def test_events_are_recorded_while_watching() -> None:
+    tv = art_tv(REST_2018, {k: [v] for k, v in REPLIES_2018.items()})
+    watched: List[float] = []
+
+    async def standby_while_watching(seconds: float) -> None:
+        watched.append(seconds)
+        # an event the TV sends by itself, eg going to standby
+        await tv.process_event("d2d_service_message", {"event": "d2d_service_message",
+                                                       "data": json.dumps({"event": "go_to_standby"})})
+
+    with patch("builtins.print"), patch("samsungframetv.diagnose.asyncio.sleep", new=standby_while_watching):
+        report = await diagnose.run_diagnostics(tv, timeout=1, watch=30)
+    assert watched == [30]
+    assert report["report_format"] == 2
+    assert [event["data"] for event in report["events"]] == [{"event": "go_to_standby"}]
