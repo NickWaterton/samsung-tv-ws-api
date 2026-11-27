@@ -342,6 +342,8 @@ It only reads from the TV (no uploads, deletes or setting changes), prints a sum
 
 If uploads are a problem, add `--upload some_picture.jpg`. It uploads that picture, records how the TV answers, and deletes it again.
 
+If art mode or standby is not detected right, add `--watch 60` and turn the TV off and on with the remote while it listens. The report then lists the events the TV sent by itself (eg `go_to_standby`, `art_mode_changed`).
+
 Reports are saved in `tests/fixtures/devices/`, and the tests replay them, so a change that would break your model is caught before release.
 
 ## License
