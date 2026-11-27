@@ -136,6 +136,8 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return self.connection
 
     async def close(self):
+        # we no longer hear art mode events, so the last state may go stale
+        self.art_mode = None
         if self.session:
             await self.session.close()
         await super().close()
@@ -359,14 +361,23 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             try:
                 ip_state = await ip_control.async_get_power_state()
                 if ip_state != ipcontrol.POWER_OFF:
-                    return ip_state
+                    return self._update_art_mode(ip_state)
             except ipcontrol.IPControlError as e:
                 _LOGGING.debug("IP Control failed: %s", e)
         rest_info = await self._get_device_info() or None
         artmode = None
         if rest_info and rest_info.get("device", {}).get("PowerState", "on") in ("on", "standby"):
             artmode = await self._try_get_artmode()
-        return ipcontrol.derive_power_state(rest_info, artmode, ip_state)
+        return self._update_art_mode(ipcontrol.derive_power_state(rest_info, artmode, ip_state))
+
+    def _update_art_mode(self, power_state: str) -> str:
+        """
+        keep art_mode in step with the power state. Art API 6.0 (2022 Frame firmware from 2026-11)
+        sends no go_to_standby event, and reports art mode on while in standby
+        """
+        if power_state in (ipcontrol.POWER_ART, ipcontrol.POWER_TV, ipcontrol.POWER_STANDBY, ipcontrol.POWER_OFF):
+            self.art_mode = power_state == ipcontrol.POWER_ART
+        return power_state
         
     async def on(self) -> bool:
         data = await self._get_device_info()
@@ -375,12 +386,21 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
     async def is_artmode(self) -> bool:
         return await self.on() and bool(self.art_mode)
         
-    async def in_artmode(self) -> bool:
+    async def in_artmode(self, ip_control: Optional[ipcontrol.SamsungTVAsyncIPControl] = None) -> bool:
+        """
+        True if the TV is in art mode
+        ip_control: optional paired SamsungTVAsyncIPControl, the only source that tells standby from art mode
+        when REST is not sure, see get_power_state()
+        """
+        if ip_control is not None:
+            return await self.get_power_state(ip_control) == ipcontrol.POWER_ART
         data = await self._get_device_info()
         power = helper.rest_power_state(data)
         # 2025+ Frames report PowerState 'standby' while in art mode (issue #33)
         if power == "on" or (power == "standby" and ipcontrol.model_year(data) >= 25):
             return await self.get_artmode() == 'on'
+        # in standby art API 6.0 says art mode is on, and sends no go_to_standby event
+        self.art_mode = False
         return False
         
     async def get_api_version(self):
