@@ -188,9 +188,10 @@ tv.art().select_image('SAM-F0201', show=False)
 info = tv.art().get_artmode()
 logging.info(info)
 
-# Switch art mode on or off
+# Switch art mode on or off, True when the TV reported the new mode
+# (art API 6.0 ignores this while the TV boots, so False can mean try again)
 tv.art().set_artmode(True)
-tv.art().set_artmode(False)
+tv.art().set_artmode(False, ip_control=ipc)   # optional paired SamsungTVIPControl, used if the art channel did not switch
 
 # Upload a picture
 file = open('test.png', 'rb')
