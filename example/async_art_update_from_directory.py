@@ -67,7 +67,7 @@ except ImportError:
     pass
 
 from samsungframetv.async_art import SamsungTVAsyncArt
-from samsungframetv import __version__
+from samsungframetv import __version__, helper
 
 logging.basicConfig(level=logging.INFO)
 
@@ -291,8 +291,9 @@ class monitor_and_display:
         '''
         checks if the matte passed for uploads to use is valid type and color
         '''
+        self.matte = helper.normalise_matte_id(self.matte)
         if self.matte != 'none':
-            matte = self.matte.split('_')
+            matte = helper.split_matte_id(self.matte)
             try:
                 mattes = await self.tv.get_matte_list(True)
                 matte_types, matte_colors = ([m['matte_type'] for m in mattes[0]], [m['color'] for m in mattes[1]])
